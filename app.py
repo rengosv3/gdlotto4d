@@ -1,22 +1,14 @@
 import streamlit as st
 import os
-import sys
 import inspect
-st.write("📁 base_analysis path:", inspect.getfile(base_analysis))
-st.write("📦 Functions in base_analysis:", dir(base_analysis))
-
-# Pastikan folder 'modules/' boleh dicapai
-sys.path.append("modules")
-
-# Import modul dari folder modules/
 from modules import base_analysis, superbase, ai_prediction, draw_update
-
-# ========== Debug Info (Buang selepas selesai debug) ==========
-st.write("📁 base_analysis loaded from:", inspect.getfile(base_analysis))
-st.write("📦 Functions in base_analysis:", dir(base_analysis))
 
 # ========== Konfigurasi Awal ==========
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
+
+# ========== Debug (Opsyenal) ==========
+# st.write("📁 base_analysis path:", inspect.getfile(base_analysis))
+# st.write("📦 Functions in base_analysis:", dir(base_analysis))
 
 # ========== Fungsi Auto Update Jika Fail Kosong ==========
 def auto_update_if_empty():
@@ -31,14 +23,15 @@ st.image("assets/logo.png", width=120)
 st.title("🔮 Breakcode4D Predictor")
 
 # ========== Sidebar ==========
-if st.sidebar.button("🔄 Update Draw Terkini"):
-    msg = draw_update.update_draws(file_path="data/draws.txt", max_days_back=30)
-    st.success(msg)
+with st.sidebar:
+    if st.button("🔄 Update Draw Terkini"):
+        msg = draw_update.update_draws(file_path="data/draws.txt", max_days_back=30)
+        st.success(msg)
 
-st.sidebar.markdown(
-    "[📝 Register Sini](https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845)",
-    unsafe_allow_html=True,
-)
+    st.markdown(
+        "[📝 Register Sini](https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845)",
+        unsafe_allow_html=True,
+    )
 
 # ========== Kandungan Utama ==========
 if auto_update_if_empty():
@@ -50,28 +43,16 @@ if auto_update_if_empty():
     ])
 
     with tab1:
-        try:
-            base_analysis.display_last_number_insight()
-        except Exception as e:
-            st.error(f"❌ Gagal papar insight: {e}")
+        base_analysis.display_last_number_insight()
 
     with tab2:
-        try:
-            base_analysis.display_base_analysis()
-            base_analysis.display_base_interface()
-        except Exception as e:
-            st.error(f"❌ Gagal papar base analysis: {e}")
+        base_analysis.display_base_analysis()
+        base_analysis.display_base_interface()
 
     with tab3:
-        try:
-            superbase.display_superbase()
-        except Exception as e:
-            st.error(f"❌ Gagal papar superbase: {e}")
+        superbase.display_superbase()
 
     with tab4:
-        try:
-            ai_prediction.display_ai_prediction()
-        except Exception as e:
-            st.error(f"❌ Gagal papar AI prediction: {e}")
+        ai_prediction.display_ai_prediction()
 else:
     st.info("Sila tekan butang 'Update Draw Terkini' di sidebar untuk mula.")
