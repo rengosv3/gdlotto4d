@@ -3,6 +3,7 @@ import os
 
 BASE_PATH = "data/base.txt"
 
+# ===================== Utiliti Base =====================
 def load_base_from_file():
     if os.path.exists(BASE_PATH):
         with open(BASE_PATH, "r") as f:
@@ -22,6 +23,7 @@ def display_base_as_text(picks):
         text += f"• Pick {i}: " + " ".join(map(str, pick)) + "\n"
     return text
 
+# ===================== Antaramuka Base =====================
 def display_base_interface():
     st.subheader("📊 Base Digit Digunakan")
     
@@ -52,3 +54,27 @@ def display_base_interface():
 
     st.markdown("### 📋 Base Sekarang")
     st.text(display_base_as_text(editable_base))
+
+# ===================== Insight Nombor Terakhir =====================
+def display_last_number_insight():
+    st.subheader("📌 Insight Nombor Terakhir")
+    
+    # Contoh data insight manual (boleh ganti dengan AI result atau `draws.txt`)
+    last_draw_date = "2025-07-20"
+    last_number = "1066"
+    picks = load_base_from_file()
+
+    insight_text = f"""
+📅 Nombor terakhir naik: {last_number} pada {last_draw_date}  
+📋 Base Digunakan:
+{display_base_as_text(picks)}
+
+Pick 1: Digit '1' - Ranking #2, Base: ❌, Cross: ✅ → 👍 Berpotensi  
+Pick 2: Digit '0' - Ranking #1, Base: ✅, Cross: ✅ → 🔥 Sangat berpotensi  
+Pick 3: Digit '6' - Ranking #1, Base: ✅, Cross: ✅ → 🔥 Sangat berpotensi  
+Pick 4: Digit '6' - Ranking #3, Base: ❌, Cross: ✅ → 👍 Berpotensi
+
+💡 **AI Insight:**  
+(Kandungan AI Insight anda akan dipaparkan di sini)
+"""
+    st.markdown(insight_text)
