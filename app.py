@@ -2,6 +2,8 @@ import streamlit as st
 import os
 import sys
 import inspect
+st.write("📁 base_analysis path:", inspect.getfile(base_analysis))
+st.write("📦 Functions in base_analysis:", dir(base_analysis))
 
 # Pastikan folder 'modules/' boleh dicapai
 sys.path.append("modules")
