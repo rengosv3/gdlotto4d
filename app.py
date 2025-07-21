@@ -1,5 +1,8 @@
 import streamlit as st
 import os
+import inspect
+st.write("💡 base_analysis file loaded:", inspect.getfile(base_analysis))
+st.write("💡 Functions in base_analysis:", dir(base_analysis))
 from modules import base_analysis, superbase, ai_prediction, draw_update
 
 # ========== Konfigurasi Awal ==========
