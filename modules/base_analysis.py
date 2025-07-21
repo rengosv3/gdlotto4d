@@ -101,3 +101,25 @@ def display_last_number_insight():
         st.markdown(f"Pick {i+1}: Digit `{digit}` - Ranking #{ranking}, Base: {base_check}, Cross: {cross_check} → {emoji}")
 
     st.markdown("💡 **AI Insight:**")
+
+# ===================== Base Analysis Display =====================
+def display_base_analysis():
+    st.subheader("📈 Analisis Base Digit")
+    base_picks = load_base_from_file()
+
+    if not base_picks:
+        st.warning("Tiada data base untuk dianalisis.")
+        return
+
+    # Kira kekerapan digit
+    digit_counts = [0] * 10
+    for pick in base_picks:
+        for digit in pick:
+            digit_counts[digit] += 1
+
+    st.markdown("### 🔢 Kekerapan Digit")
+    for i, count in enumerate(digit_counts):
+        st.write(f"Digit {i}: {count} kali")
+
+    st.markdown("### 📊 Carta Bar Kekerapan")
+    st.bar_chart(digit_counts)
