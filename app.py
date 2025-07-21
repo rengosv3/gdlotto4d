@@ -1,58 +1,40 @@
 import streamlit as st
 import os
 import inspect
-from modules import base_analysis, superbase, ai_prediction, draw_update
 
-# ========== Konfigurasi Awal ==========
+from modules import base_analysis, draw_update, superbase
+
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
-
-# ========== Debug (Opsyenal) ==========
-# st.write("📁 base_analysis path:", inspect.getfile(base_analysis))
-# st.write("📦 Functions in base_analysis:", dir(base_analysis))
-
-# ========== Fungsi Auto Update Jika Fail Kosong ==========
-def auto_update_if_empty():
-    draw_file = "data/draws.txt"
-    if not os.path.exists(draw_file) or os.stat(draw_file).st_size == 0:
-        st.warning("🚨 Tiada data draw ditemui. Klik 'Update Draw Terkini' untuk mula.")
-        return False
-    return True
-
-# ========== Logo & Tajuk ==========
-st.image("assets/logo.png", width=120)
 st.title("🔮 Breakcode4D Predictor")
 
-# ========== Sidebar ==========
-with st.sidebar:
-    if st.button("🔄 Update Draw Terkini"):
-        msg = draw_update.update_draws(file_path="data/draws.txt", max_days_back=30)
-        st.success(msg)
+# Papar path fail untuk debug (pilihan)
+st.caption(f"📁 base_analysis loaded from: {inspect.getfile(base_analysis)}")
+st.caption(f"📁 draw_update loaded from: {inspect.getfile(draw_update)}")
+st.caption(f"📁 superbase loaded from: {inspect.getfile(superbase)}")
 
-    st.markdown(
-        "[📝 Register Sini](https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845)",
-        unsafe_allow_html=True,
-    )
+# Butang Update dan Register
+colA, colB = st.columns([2, 2])
+with colA:
+    draw_update.display_draw_update()
+with colB:
+    st.markdown("### 📌 Register Breakcode4D")
+    st.link_button("📝 Register Sini", "https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845")
 
-# ========== Kandungan Utama ==========
-if auto_update_if_empty():
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "📌 Insight Terkini",
-        "📊 Base Analysis",
-        "🚀 Super Base",
-        "🤖 AI Prediction"
-    ])
+# Layout Tab
+tabs = st.tabs(["📊 Base Digit", "📈 Analisis", "📌 Nombor Terakhir", "🤖 AI Prediction", "🌟 Super Base"])
 
-    with tab1:
-        base_analysis.display_last_number_insight()
+with tabs[0]:
+    base_analysis.display_base_interface()
 
-    with tab2:
-        base_analysis.display_base_analysis()
-        base_analysis.display_base_interface()
+with tabs[1]:
+    base_analysis.display_base_analysis()
 
-    with tab3:
-        superbase.display_superbase()
+with tabs[2]:
+    base_analysis.display_last_number_insight()
 
-    with tab4:
-        ai_prediction.display_ai_prediction()
-else:
-    st.info("Sila tekan butang 'Update Draw Terkini' di sidebar untuk mula.")
+with tabs[3]:
+    from modules.base_analysis import display_ai_prediction
+    display_ai_prediction()
+
+with tabs[4]:
+    superbase.display_super_base()
