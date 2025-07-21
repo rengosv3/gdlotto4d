@@ -1,125 +1,40 @@
-import streamlit as st
 import os
-from datetime import datetime
+from collections import Counter
 
-BASE_PATH = "data/base.txt"
+def save_base_to_file(base_digits, file_path):
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w') as f:
+        for pick in base_digits:
+            f.write(' '.join(pick) + '\n')
 
-# ===================== Base Loader =====================
-def load_base_from_file():
-    if os.path.exists(BASE_PATH):
-        with open(BASE_PATH, "r") as f:
-            lines = f.read().splitlines()
-            return [list(map(int, line.strip().split())) for line in lines if line.strip()]
-    else:
+def load_base_from_file(file_path):
+    if not os.path.exists(file_path):
         return []
+    base = []
+    with open(file_path, 'r') as f:
+        for line in f:
+            digits = line.strip().split()
+            if digits:
+                base.append(digits)
+    return base
 
-def save_base_to_file(picks):
-    with open(BASE_PATH, "w") as f:
-        for pick in picks:
-            f.write(" ".join(map(str, pick)) + "\n")
+def display_base_as_text(file_path):
+    if not os.path.exists(file_path):
+        return "⚠️ Tiada fail dijumpai."
+    lines = []
+    with open(file_path, 'r') as f:
+        for i, line in enumerate(f):
+            digits = line.strip()
+            if digits:
+                lines.append(f"Pick {i+1}: {digits}")
+    return '\n'.join(lines)
 
-def display_base_as_text(picks):
-    text = ""
-    for i, pick in enumerate(picks, start=1):
-        text += f"• Pick {i}: " + " ".join(map(str, pick)) + "\n"
-    return text
-
-# ===================== Base Editor =====================
-def display_base_interface():
-    st.subheader("📊 Base Digit Digunakan")
-    
-    base_picks = load_base_from_file()
-
-    if not base_picks:
-        st.warning("Tiada base digit ditemui. Sila masukkan digit secara manual.")
-        base_picks = [[0, 0, 0, 0, 0] for _ in range(4)]
-
-    editable_base = []
-    for i in range(4):
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            d1 = st.number_input(f"Pick {i+1} - D1", min_value=0, max_value=9, value=base_picks[i][0], key=f"{i}_0")
-        with col2:
-            d2 = st.number_input(f"Pick {i+1} - D2", min_value=0, max_value=9, value=base_picks[i][1], key=f"{i}_1")
-        with col3:
-            d3 = st.number_input(f"Pick {i+1} - D3", min_value=0, max_value=9, value=base_picks[i][2], key=f"{i}_2")
-        with col4:
-            d4 = st.number_input(f"Pick {i+1} - D4", min_value=0, max_value=9, value=base_picks[i][3], key=f"{i}_3")
-        with col5:
-            d5 = st.number_input(f"Pick {i+1} - D5", min_value=0, max_value=9, value=base_picks[i][4], key=f"{i}_4")
-        editable_base.append([d1, d2, d3, d4, d5])
-
-    if st.button("💾 Simpan Base"):
-        save_base_to_file(editable_base)
-        st.success("Base digit berjaya disimpan.")
-
-    st.markdown("### 📋 Base Sekarang")
-    st.text(display_base_as_text(editable_base))
-
-# ===================== Draw Loader =====================
-def load_draws(file_path='data/draws.txt'):
-    draws = []
-    if os.path.exists(file_path):
-        with open(file_path, 'r') as f:
-            for line in f:
-                parts = line.strip().split()
-                if len(parts) == 2:
-                    draws.append({'date': parts[0], 'number': parts[1]})
-    return draws
-
-# ===================== Insight Paparan =====================
-def display_last_number_insight():
-    draws = load_draws()
-    base_picks = load_base_from_file()
-
-    if not draws or not base_picks:
-        st.warning("Tiada data cabutan atau base digit tersedia.")
-        return
-
-    last_draw = draws[-1]
-    number = last_draw["number"]
-    date = last_draw["date"]
-
-    st.markdown("### 📌 Insight Nombor Terakhir")
-    st.markdown(f"📅 Nombor terakhir naik: `{number}` pada `{date}`")
-
-    base_text = display_base_as_text(base_picks)
-    st.markdown("📋 Base Digunakan:\n```\n" + base_text + "```")
-
-    for i, digit_char in enumerate(number):
-        digit = int(digit_char)
-        base = base_picks[i]
-        ranking = sorted(base, reverse=True).index(digit)+1 if digit in base else "-"
-        base_check = "✅" if digit in base else "❌"
-        cross_check = "✅"  # Dummy logic
-        if base_check == "✅" and cross_check == "✅":
-            emoji = "🔥 Sangat berpotensi"
-        elif cross_check == "✅":
-            emoji = "👍 Berpotensi"
-        else:
-            emoji = "❌ Kurang"
-        st.markdown(f"Pick {i+1}: Digit `{digit}` - Ranking #{ranking}, Base: {base_check}, Cross: {cross_check} → {emoji}")
-
-    st.markdown("💡 **AI Insight:**")
-
-# ===================== Base Analysis Display =====================
-def display_base_analysis():
-    st.subheader("📈 Analisis Base Digit")
-    base_picks = load_base_from_file()
-
-    if not base_picks:
-        st.warning("Tiada data base untuk dianalisis.")
-        return
-
-    # Kira kekerapan digit
-    digit_counts = [0] * 10
-    for pick in base_picks:
-        for digit in pick:
-            digit_counts[digit] += 1
-
-    st.markdown("### 🔢 Kekerapan Digit")
-    for i, count in enumerate(digit_counts):
-        st.write(f"Digit {i}: {count} kali")
-
-    st.markdown("### 📊 Carta Bar Kekerapan")
-    st.bar_chart(digit_counts)
+def score_digits(draws, recent_n=30):
+    weights = [Counter() for _ in range(4)]
+    for i, draw in enumerate(draws[-recent_n:]):
+        for j, digit in enumerate(draw['number']):
+            weights[j][digit] += recent_n - i
+    base = []
+    for pick in weights:
+        base.append([digit for digit, _ in pick.most_common(5)])
+    return base
