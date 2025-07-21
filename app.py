@@ -1,9 +1,17 @@
 import streamlit as st
 import os
+import sys
 import inspect
-st.write("💡 base_analysis file loaded:", inspect.getfile(base_analysis))
-st.write("💡 Functions in base_analysis:", dir(base_analysis))
+
+# Pastikan folder 'modules/' boleh dicapai
+sys.path.append("modules")
+
+# Import modul dari folder modules/
 from modules import base_analysis, superbase, ai_prediction, draw_update
+
+# ========== Debug Info (Buang selepas selesai debug) ==========
+st.write("📁 base_analysis loaded from:", inspect.getfile(base_analysis))
+st.write("📦 Functions in base_analysis:", dir(base_analysis))
 
 # ========== Konfigurasi Awal ==========
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
@@ -30,7 +38,7 @@ st.sidebar.markdown(
     unsafe_allow_html=True,
 )
 
-# ========== Semak & Papar Isi ==========
+# ========== Kandungan Utama ==========
 if auto_update_if_empty():
     tab1, tab2, tab3, tab4 = st.tabs([
         "📌 Insight Terkini",
@@ -40,16 +48,28 @@ if auto_update_if_empty():
     ])
 
     with tab1:
-        base_analysis.display_last_number_insight()
+        try:
+            base_analysis.display_last_number_insight()
+        except Exception as e:
+            st.error(f"❌ Gagal papar insight: {e}")
 
     with tab2:
-        base_analysis.display_base_analysis()
-        base_analysis.display_base_interface()
+        try:
+            base_analysis.display_base_analysis()
+            base_analysis.display_base_interface()
+        except Exception as e:
+            st.error(f"❌ Gagal papar base analysis: {e}")
 
     with tab3:
-        superbase.display_superbase()
+        try:
+            superbase.display_superbase()
+        except Exception as e:
+            st.error(f"❌ Gagal papar superbase: {e}")
 
     with tab4:
-        ai_prediction.display_ai_prediction()
+        try:
+            ai_prediction.display_ai_prediction()
+        except Exception as e:
+            st.error(f"❌ Gagal papar AI prediction: {e}")
 else:
     st.info("Sila tekan butang 'Update Draw Terkini' di sidebar untuk mula.")
