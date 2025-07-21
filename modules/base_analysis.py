@@ -1,8 +1,10 @@
 import streamlit as st
 import os
+from datetime import datetime
 
 BASE_PATH = "data/base.txt"
 
+# ===================== Base Loader =====================
 def load_base_from_file():
     if os.path.exists(BASE_PATH):
         with open(BASE_PATH, "r") as f:
@@ -22,9 +24,10 @@ def display_base_as_text(picks):
         text += f"• Pick {i}: " + " ".join(map(str, pick)) + "\n"
     return text
 
+# ===================== Base Editor =====================
 def display_base_interface():
     st.subheader("📊 Base Digit Digunakan")
-
+    
     base_picks = load_base_from_file()
 
     if not base_picks:
@@ -53,32 +56,48 @@ def display_base_interface():
     st.markdown("### 📋 Base Sekarang")
     st.text(display_base_as_text(editable_base))
 
-def display_last_number_insight():
-    st.subheader("📌 Insight Nombor Terakhir")
-
-    last_number = None
-    last_date = "Tidak diketahui"
-    draws_path = "data/draws.txt"
-
-    if os.path.exists(draws_path):
-        with open(draws_path, "r") as f:
-            lines = f.read().splitlines()
-            if lines:
-                last_line = lines[-1]
-                parts = last_line.strip().split()
+# ===================== Draw Loader =====================
+def load_draws(file_path='data/draws.txt'):
+    draws = []
+    if os.path.exists(file_path):
+        with open(file_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
                 if len(parts) == 2:
-                    last_date = parts[0].strip()
-                    last_number = parts[1].strip()
+                    draws.append({'date': parts[0], 'number': parts[1]})
+    return draws
 
-    if not last_number:
-        st.warning("❗ Nombor terakhir tidak dapat dibaca dari draws.txt")
+# ===================== Insight Paparan =====================
+def display_last_number_insight():
+    draws = load_draws()
+    base_picks = load_base_from_file()
+
+    if not draws or not base_picks:
+        st.warning("Tiada data cabutan atau base digit tersedia.")
         return
 
-    picks = load_base_from_file()
+    last_draw = draws[-1]
+    number = last_draw["number"]
+    date = last_draw["date"]
 
-    insight_text = f"""
-📅 Nombor terakhir naik: `{last_number}` pada `{last_date}`  
-📋 Base Digunakan:
-{display_base_as_text(picks)}
-"""
-    st.markdown(insight_text)
+    st.markdown("### 📌 Insight Nombor Terakhir")
+    st.markdown(f"📅 Nombor terakhir naik: `{number}` pada `{date}`")
+
+    base_text = display_base_as_text(base_picks)
+    st.markdown("📋 Base Digunakan:\n```\n" + base_text + "```")
+
+    for i, digit_char in enumerate(number):
+        digit = int(digit_char)
+        base = base_picks[i]
+        ranking = sorted(base, reverse=True).index(digit)+1 if digit in base else "-"
+        base_check = "✅" if digit in base else "❌"
+        cross_check = "✅"  # Dummy logic, boleh ganti dengan check sebenar jika ada
+        if base_check == "✅" and cross_check == "✅":
+            emoji = "🔥 Sangat berpotensi"
+        elif cross_check == "✅":
+            emoji = "👍 Berpotensi"
+        else:
+            emoji = "❌ Kurang"
+        st.markdown(f"Pick {i+1}: Digit `{digit}` - Ranking #{ranking}, Base: {base_check}, Cross: {cross_check} → {emoji}")
+
+    st.markdown("💡 **AI Insight:**")
