@@ -91,7 +91,7 @@ def display_last_number_insight():
         base = base_picks[i]
         ranking = sorted(base, reverse=True).index(digit)+1 if digit in base else "-"
         base_check = "✅" if digit in base else "❌"
-        cross_check = "✅"  # Dummy logic, boleh ganti dengan check sebenar jika ada
+        cross_check = "✅"  # Dummy logic
         if base_check == "✅" and cross_check == "✅":
             emoji = "🔥 Sangat berpotensi"
         elif cross_check == "✅":
