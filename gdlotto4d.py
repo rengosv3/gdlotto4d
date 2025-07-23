@@ -14,7 +14,8 @@ from backtest import run_backtest
 from wheelpick import (
     get_like_dislike_digits,
     generate_wheel_combos,
-    filter_wheel_combos
+    filter_wheel_combos,
+    parse_manual_base
 )
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
@@ -77,7 +78,7 @@ with tabs[0]:
         for strat in strategies:
             try:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
-                if arah == "Kanan→Kiri":
+                if arah == "Kanan→Kanan":
                     fp = last['number'][::-1]
                     base = base[::-1]
                 else:
@@ -124,7 +125,7 @@ with tabs[2]:
             dir_flag = 'right' if arah_bt=="Kanan→Kanan" else 'left'
             df_bt, matched = run_backtest(
                 draws, strategy=strat_bt, recent_n=n_bt,
-                arah='right' if arah_bt=="Kanan→Kanan" else 'left',
+                arah=dir_flag,
                 backtest_rounds=rounds
             )
             st.success(f"🎯 Matched: {matched} daripada {rounds}")
@@ -141,6 +142,8 @@ with tabs[3]:
 with tabs[4]:
     st.header("🎡 Wheelpick Generator")
     arah_wp = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="wp_dir")
+    mode = st.radio("Mod Input Base:", ["Auto (dari Base)","Manual Input"], key="wp_mode")
+
     like, dislike = get_like_dislike_digits(draws)
     st.markdown(f"👍 Like: `{like}`    👎 Dislike: `{dislike}`")
     user_like = st.text_input("Digit Like:", value=' '.join(like), key="wp_like")
@@ -148,13 +151,27 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
-    strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
-    recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
-    try:
-        base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
-    except Exception as e:
-        st.error(str(e))
-        st.stop()
+    # Pilih base
+    if mode == "Auto (dari Base)":
+        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
+        recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
+        try:
+            base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
+        except Exception as e:
+            st.error(str(e))
+            st.stop()
+    else:
+        st.markdown("**Masukkan 4 baris, setiap baris 5 digit tunggal (pisahkan dengan ruang):**")
+        manual_inputs = []
+        for i in range(4):
+            txt = st.text_input(f"Posisi {i+1}", key=f"manual_base_{i}")
+            manual_inputs.append(txt)
+        try:
+            base_wp = parse_manual_base(manual_inputs)
+            st.success("Input manual base sah.")
+        except ValueError as ve:
+            st.error(str(ve))
+            st.stop()
 
     lot = st.text_input("Nilai Lot:", value="0.10", key="wp_lot")
 
