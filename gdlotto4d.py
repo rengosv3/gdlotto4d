@@ -1,4 +1,5 @@
 # gdlotto4d.py
+
 import streamlit as st
 import pandas as pd
 
@@ -22,7 +23,7 @@ st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto)")
 st.markdown(f"⏳ Next draw in: `{str(get_draw_countdown_from_last_8pm()).split('.')[0]}`")
 
-# -- Update draws & base --
+# Update draws & base
 col1, col2 = st.columns(2)
 with col1:
     if st.button("📥 Update Draw Terkini"):
@@ -40,18 +41,16 @@ with col2:
     </a>
     """, unsafe_allow_html=True)
 
-# -- Load draws --
+# Load draws
 draws = load_draws()
 if not draws:
     st.warning("⚠️ Sila klik 'Update Draw Terkini' untuk mula.")
     st.stop()
 
 st.info(f"📅 Tarikh terakhir: **{draws[-1]['date']}** | 📊 Jumlah draw: **{len(draws)}**")
-
-# -- Tabs --
 tabs = st.tabs(["Insight", "Ramalan", "Backtest", "Draw List", "Wheelpick"])
 
-# --- Tab 1: Insight ---
+# Tab 1: Insight
 with tabs[0]:
     st.header("📌 Insight Terakhir")
     last = draws[-1]
@@ -80,7 +79,7 @@ with tabs[0]:
         for strat in strategies:
             try:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
-                if arah == "Kanan→Kiri":
+                if arah == "Kanan→Kanan":
                     fp = last['number'][::-1]
                     base = base[::-1]
                 else:
@@ -100,7 +99,7 @@ with tabs[0]:
         else:
             st.warning("❗ Tidak cukup data untuk perbandingan.")
 
-# --- Tab 2: Ramalan ---
+# Tab 2: Ramalan
 with tabs[1]:
     st.header("🧠 Ramalan Base")
     strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="pred_strat")
@@ -115,7 +114,7 @@ with tabs[1]:
     except Exception as e:
         st.error(str(e))
 
-# --- Tab 3: Backtest ---
+# Tab 3: Backtest
 with tabs[2]:
     st.header("🔁 Backtest Base")
     arah_bt = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="bt_dir")
@@ -127,19 +126,20 @@ with tabs[2]:
             dir_flag = 'right' if arah_bt=="Kanan→Kanan" else 'left'
             df_bt, matched = run_backtest(
                 draws, strategy=strat_bt, recent_n=n_bt,
-                arah=dir_flag, backtest_rounds=rounds
+                arah=dir_flag,
+                backtest_rounds=rounds
             )
             st.success(f"🎯 Matched: {matched} daripada {rounds}")
             st.dataframe(df_bt, use_container_width=True)
         except Exception as e:
             st.error(str(e))
 
-# --- Tab 4: Draw List ---
+# Tab 4: Draw List
 with tabs[3]:
     st.header("📋 Senarai Draw")
     st.dataframe(pd.DataFrame(draws), use_container_width=True)
 
-# --- Tab 5: Wheelpick ---
+# Tab 5: Wheelpick
 with tabs[4]:
     st.header("🎡 Wheelpick Generator")
     arah_wp = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="wp_dir")
