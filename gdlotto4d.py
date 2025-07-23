@@ -47,6 +47,7 @@ if not draws:
     st.stop()
 
 st.info(f"📅 Tarikh terakhir: **{draws[-1]['date']}** | 📊 Jumlah draw: **{len(draws)}**")
+
 tabs = st.tabs([
     "Insight",
     "Ramalan",
@@ -80,9 +81,10 @@ with tabs[0]:
         st.markdown("---")
         st.subheader("Perbandingan Strategi")
         arah = st.radio("Arah Digit:", ["Kiri→Kanan", "Kanan→Kiri"], key="insight_dir")
-        recent_n = st.slider("Draw untuk base:", 10, 100, 50, 5, key="insight_n")
+        recent_n = st.slider("Draw untuk base:", 10, len(draws), 50, 5, key="insight_n")
+
+        strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
         rows = []
-        strategies = ['frequency','gap','hybrid','qaisara','smartpattern']
         for strat in strategies:
             try:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
@@ -100,6 +102,7 @@ with tabs[0]:
                 })
             except Exception:
                 pass
+
         if rows:
             df_insight = pd.DataFrame(rows).sort_values("✅ Total", ascending=False)
             st.dataframe(df_insight, use_container_width=True)
@@ -109,8 +112,10 @@ with tabs[0]:
 # Tab 2: Ramalan
 with tabs[1]:
     st.header("🧠 Ramalan Base")
-    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="pred_strat")
-    recent_n2 = st.slider("Draw terkini:", 5, 120, 30, 5, key="pred_n")
+    strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
+    strat = st.selectbox("Strategi:", strategies, key="pred_strat")
+    recent_n2 = st.slider("Draw terkini:", 5, len(draws), 30, 5, key="pred_n")
+
     try:
         base = generate_base(draws, method=strat, recent_n=recent_n2)
         for i, p in enumerate(base, start=1):
@@ -124,15 +129,19 @@ with tabs[1]:
 # Tab 3: Backtest
 with tabs[2]:
     st.header("🔁 Backtest Base")
-    arah_bt = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="bt_dir")
-    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="bt_strat")
-    n_bt = st.slider("Draw untuk base:", 5, 120, 30, 5, key="bt_n")
+    arah_bt = st.radio("Arah:", ["Kiri→Kanan", "Kanan→Kiri"], key="bt_dir")
+    strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
+    strat_bt = st.selectbox("Strategi:", strategies, key="bt_strat")
+    n_bt = st.slider("Draw untuk base:", 5, len(draws), 30, 5, key="bt_n")
     rounds = st.slider("Bilangan backtest:", 5, 50, 10, key="bt_rounds")
+
     if st.button("🚀 Jalankan Backtest", key="bt_run"):
         try:
             df_bt, matched = run_backtest(
-                draws, strategy=strat_bt, recent_n=n_bt,
-                arah='right' if arah_bt=="Kanan→Kiri" else 'left',
+                draws,
+                strategy=strat_bt,
+                recent_n=n_bt,
+                arah='right' if arah_bt == "Kanan→Kiri" else 'left',
                 backtest_rounds=rounds
             )
             st.success(f"🎯 Matched: {matched} daripada {rounds}")
@@ -148,7 +157,7 @@ with tabs[3]:
 # Tab 5: Wheelpick
 with tabs[4]:
     st.header("🎡 Wheelpick Generator")
-    arah_wp = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="wp_dir")
+    arah_wp = st.radio("Arah:", ["Kiri→Kanan", "Kanan→Kiri"], key="wp_dir")
     like, dislike = get_like_dislike_digits(draws)
     st.markdown(f"👍 Like: `{like}`    👎 Dislike: `{dislike}`")
     user_like = st.text_input("Digit Like:", value=' '.join(like), key="wp_like")
@@ -160,8 +169,9 @@ with tabs[4]:
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
 
     if input_mode == "Auto dari strategi":
-        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
-        recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
+        strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
+        strat_wp = st.selectbox("Strategi Base:", strategies, key="wp_strat")
+        recent_wp = st.slider("Draw untuk base:", 5, len(draws), 30, 5, key="wp_n")
         try:
             base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
         except Exception as e:
@@ -208,7 +218,7 @@ with tabs[4]:
 # Tab 6: Hit Frequency
 with tabs[5]:
     show_hit_frequency_tab(draws)
-    
+
 # Tab 7: Last Hit
 with tabs[6]:
     show_last_hit_tab(draws)
