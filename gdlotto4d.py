@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 
@@ -121,10 +120,9 @@ with tabs[2]:
     rounds = st.slider("Bilangan backtest:", 5, 50, 10, key="bt_rounds")
     if st.button("🚀 Jalankan Backtest", key="bt_run"):
         try:
-            dir_flag = 'right' if arah_bt=="Kanan→Kanan" else 'left'
             df_bt, matched = run_backtest(
                 draws, strategy=strat_bt, recent_n=n_bt,
-                arah='right' if arah_bt=="Kanan→Kanan" else 'left',
+                arah='right' if arah_bt=="Kanan→Kiri" else 'left',
                 backtest_rounds=rounds
             )
             st.success(f"🎯 Matched: {matched} daripada {rounds}")
@@ -148,13 +146,26 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
-    strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
-    recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
-    try:
-        base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
-    except Exception as e:
-        st.error(str(e))
-        st.stop()
+    # Manual vs Auto toggle
+    input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
+
+    if input_mode == "Auto dari strategi":
+        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
+        recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
+        try:
+            base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
+        except Exception as e:
+            st.error(str(e))
+            st.stop()
+    else:
+        manual_base = st.text_area("Masukkan Base Manual (4 baris, digit pisah space)", height=120, key="wp_manual")
+        try:
+            base_wp = [line.strip().split() for line in manual_base.strip().split('\n')]
+            if len(base_wp) != 4 or any(not p for p in base_wp):
+                raise ValueError("Format base tak sah.")
+        except Exception as e:
+            st.error(f"Base manual error: {str(e)}")
+            st.stop()
 
     lot = st.text_input("Nilai Lot:", value="0.10", key="wp_lot")
 
