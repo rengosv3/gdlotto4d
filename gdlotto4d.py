@@ -15,6 +15,7 @@ from wheelpick import (
     generate_wheel_combos,
     filter_wheel_combos
 )
+from hit_frequency import show_hit_frequency_tab  # ← import baru
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto)")
@@ -45,7 +46,14 @@ if not draws:
     st.stop()
 
 st.info(f"📅 Tarikh terakhir: **{draws[-1]['date']}** | 📊 Jumlah draw: **{len(draws)}**")
-tabs = st.tabs(["Insight", "Ramalan", "Backtest", "Draw List", "Wheelpick"])
+tabs = st.tabs([
+    "Insight",
+    "Ramalan",
+    "Backtest",
+    "Draw List",
+    "Wheelpick",
+    "Hit Frequency"  # ← tab baru
+])
 
 # Tab 1: Insight
 with tabs[0]:
@@ -194,3 +202,7 @@ with tabs[4]:
         data = '\n'.join(filtered).encode()
         st.download_button("💾 Muat Turun", data=data,
                            file_name="wheelpick.txt", mime="text/plain")
+
+# Tab 6: Hit Frequency
+with tabs[5]:
+    show_hit_frequency_tab(draws)
