@@ -1,0 +1,59 @@
+# last_hit.py
+
+import streamlit as st
+import pandas as pd
+from collections import defaultdict
+import os
+from datetime import datetime
+
+def show_last_hit_tab(draws):
+    st.header("📅 Last Hit Digit")
+
+    n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 60, step=5, key="lh_draws")
+    positions = {
+        "P1": st.checkbox("P1", value=True, key="lh_p1"),
+        "P2": st.checkbox("P2", value=True, key="lh_p2"),
+        "P3": st.checkbox("P3", value=True, key="lh_p3"),
+        "P4": st.checkbox("P4", value=True, key="lh_p4"),
+    }
+
+    selected_positions = [i for i, k in enumerate(positions.values()) if k]
+    if not selected_positions:
+        st.warning("⚠️ Sila pilih sekurang-kurangnya satu posisi.")
+        return
+
+    recent_draws = draws[-n_draws:]
+    last_hit_map = defaultdict(lambda: {"date": None, "index": None})
+
+    # Cari draw terakhir setiap digit
+    for idx in reversed(range(len(recent_draws))):  # paling terkini → ke belakang
+        draw = recent_draws[idx]
+        for i in selected_positions:
+            digit = draw["number"][i]
+            if last_hit_map[digit]["date"] is None:
+                last_hit_map[digit]["date"] = draw["date"]
+                last_hit_map[digit]["index"] = idx
+
+    # Format data ke dataframe
+    all_digits = [f"{i:02d}" for i in range(10)]
+    rows = []
+    for digit in all_digits:
+        info = last_hit_map.get(digit, {"date": None, "index": None})
+        date_hit = info["date"]
+        skipped = len(recent_draws) - 1 - info["index"] if info["index"] is not None else n_draws
+        rows.append({
+            "Number": digit,
+            "Last Date Hit": date_hit if date_hit else "—",
+            "Games Skipped": skipped
+        })
+
+    df = pd.DataFrame(rows)
+    df.insert(0, "Rank", range(1, len(df)+1))
+    df.sort_values(["Games Skipped", "Number"], ascending=[False, True], inplace=True)
+    df["Rank"] = range(1, len(df)+1)
+    st.dataframe(df, use_container_width=True)
+
+    # Simpan ke fail
+    os.makedirs("data", exist_ok=True)
+    df.to_csv("data/last_hit.txt", index=False, sep="\t")
+    st.success("📁 Disimpan ke `data/last_hit.txt`")

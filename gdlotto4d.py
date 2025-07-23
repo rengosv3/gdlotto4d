@@ -15,7 +15,8 @@ from wheelpick import (
     generate_wheel_combos,
     filter_wheel_combos
 )
-from hit_frequency import show_hit_frequency_tab  # ← import baru
+from hit_frequency import show_hit_frequency_tab
+from last_hit import show_last_hit_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto)")
@@ -52,7 +53,8 @@ tabs = st.tabs([
     "Backtest",
     "Draw List",
     "Wheelpick",
-    "Hit Frequency"  # ← tab baru
+    "Hit Frequency",
+    "Last Hit"
 ])
 
 # Tab 1: Insight
@@ -206,3 +208,7 @@ with tabs[4]:
 # Tab 6: Hit Frequency
 with tabs[5]:
     show_hit_frequency_tab(draws)
+    
+# Tab 7: Last Hit
+with tabs[6]:
+    show_last_hit_tab(draws)
