@@ -1,109 +1,146 @@
-# app.py
+# strategies.py
 
-import streamlit as st
-import pandas as pd
 import itertools
-from datetime import datetime
+from collections import Counter
+from last_hit_method import last_hit_method  # pastikan fail ini ada
 
-# Import strategi ramalan
-from strategies import generate_base
+def generate_base(draws, method='frequency', recent_n=50):
+    print(f"[DEBUG] strategies.py loaded from: {__file__}")
+    print(f"[DEBUG] generate_base called with method='{method}', recent_n={recent_n}, total_draws={len(draws)}")
 
-# Tab helper — pastikan modul ini wujud
-from hit_frequency import show_hit_frequency_tab
-from last_hit import show_last_hit_tab
-from backtest import run_backtest
-from wheelpick import show_wheelpick_tab
+    total = len(draws)
+    requirements = {
+        'frequency': recent_n,
+        'gap': 120,
+        'hybrid': recent_n,
+        'coreboost': 60,
+        'coreplus': 60,
+        'smartpattern': 60,
+        'hitfq': recent_n
+    }
 
-@st.cache_data
-def load_draws(csv_path: str):
-    df = pd.read_csv(csv_path, parse_dates=['date'])
-    df['number'] = df['number'].astype(str).str.zfill(4)
-    records = df[['date', 'number']].to_dict('records')
-    return records, df
+    if method not in requirements:
+        raise ValueError(f"Unknown strategy '{method}'")
+    if total < requirements[method]:
+        raise ValueError(f"Not enough draws for '{method}' (need {requirements[method]}, have {total})")
 
-def main():
-    st.set_page_config(page_title="4D Predictor", layout="wide")
-    st.title("🎲 4D Predictor App")
+    # ---------- Helper methods ----------
+    def freq_method(draws_slice, n):
+        counters = [Counter() for _ in range(4)]
+        for d in draws_slice[-n:]:
+            for i, digit in enumerate(d['number']):
+                counters[i][digit] += 1
+        return [[d for d,_ in c.most_common(5)] for c in counters]
 
-    draw_list, df_draws = load_draws("data/draws.csv")
+    def gap_method(draws_slice):
+        freq_120 = [Counter() for _ in range(4)]
+        for draw in draws_slice[-120:]:
+            for i, d in enumerate(draw['number']):
+                freq_120[i][d] += 1
+        top_digits = []
+        for cnt in freq_120:
+            mc = cnt.most_common(10)
+            if len(mc) < 3:
+                top_digits.append([d for d,_ in mc])
+            else:
+                filtered = [d for d,_ in mc if d not in (mc[0][0], mc[-1][0])]
+                top_digits.append(filtered[:8])
+        recent10 = draws_slice[-10:]
+        recent_top = [Counter() for _ in range(4)]
+        recent_seen = [set() for _ in range(4)]
+        for draw in recent10:
+            for i, d in enumerate(draw['number']):
+                recent_top[i][d] += 1
+                recent_seen[i].add(d)
+        gap_res = []
+        for i in range(4):
+            excluded = set([d for d,_ in recent_top[i].most_common(2)]) | recent_seen[i]
+            final = [d for d in top_digits[i] if d not in excluded]
+            gap_res.append(final[:5])
+        return gap_res
 
-    st.sidebar.header("📊 Statistik Data")
-    st.sidebar.write(f"Jumlah draw: {len(df_draws)}")
-    st.sidebar.write(f"Tarikh terkini: {df_draws['date'].max().date()}")
+    # ---------- Strategies ----------
+    if method == 'frequency':
+        return freq_method(draws, recent_n)
 
-    tabs = st.tabs([
-        "Insight", "Ramalan", "Backtest",
-        "Draw List", "Wheelpick",
-        "Hit Frequency", "Last Hit"
-    ])
+    if method == 'gap':
+        return gap_method(draws)
 
-    # --- Tab 1: Insight ---
-    with tabs[0]:
-        st.header("📈 Insight")
-        df_plot = df_draws.copy()
-        df_plot['num_int'] = df_plot['number'].astype(int)
-        st.line_chart(df_plot.set_index('date')['num_int'])
-        st.write("Trend nombor sebagai integer")
+    if method == 'hybrid':
+        f = freq_method(draws, recent_n)
+        g = gap_method(draws)
+        combined = []
+        for f_list, g_list in zip(f, g):
+            cnt = Counter(f_list + g_list)
+            combined.append([d for d,_ in cnt.most_common(5)])
+        return combined
 
-    # --- Tab 2: Ramalan ---
-    with tabs[1]:
-        st.header("🔮 Ramalan 4D")
-        strategy = st.selectbox("Pilih strategi:", [
-            'frequency', 'gap', 'hybrid',
-            'coreboost', 'coreplus',
-            'smartpattern', 'hitfq'
-        ])
-        recent_n = st.slider(
-            "Bilangan draw terkini:", 30, 120, 60, step=5
-        )
+    if method == 'coreboost':
+        f = freq_method(draws, recent_n)
+        h = last_hit_method(draws, recent_n)
+        last_draw_digits = [d for d in draws[-1]['number']]
 
-        try:
-            base_digits = generate_base(
-                draws=draw_list,
-                method=strategy,
-                recent_n=recent_n
-            )
-            st.write("Digit setiap posisi:", base_digits)
+        final = []
+        for pos in range(4):
+            score = Counter()
+            for d in f[pos]:
+                score[d] += 2
+            for d in h.get(pos, []):
+                score[str(d)] += 1.5
+            score[last_draw_digits[pos]] += 3
+            ranked = score.most_common()
+            final.append([d for d,_ in ranked[:5]])
+        return final
 
-            combos = itertools.product(*base_digits)
-            predictions = [''.join(d) for d in combos]
-            st.write(f"Jumlah kombinasi: {len(predictions)}")
-            st.text_area(
-                "Senarai kombinasi:",
-                '\n'.join(predictions),
-                height=300
-            )
-        except Exception as e:
-            st.error(f"⚠️ Ralat: {e}")
+    if method == 'coreplus':
+        f = freq_method(draws, recent_n)
+        h = last_hit_method(draws, recent_n)
+        last_draw_digits = [d for d in draws[-1]['number']]
+        recent_backtest = draws[-30:]
+        backtest_counters = [Counter() for _ in range(4)]
+        for d in recent_backtest:
+            for i, digit in enumerate(d['number']):
+                backtest_counters[i][digit] += 1
+        top_backtest = [[d for d,_ in c.most_common(3)] for c in backtest_counters]
 
-    # --- Tab 3: Backtest ---
-    with tabs[2]:
-        st.header("📊 Backtest")
-        st.write("Uji prestasi strategi atas draw terakhir")
-        backtest_n = st.slider(
-            "Bilangan draw untuk backtest:", 30, 200, 60, step=10
-        )
-        if st.button("Run Backtest"):
-            res = run_backtest(draw_list, backtest_n)
-            st.dataframe(res)
+        final = []
+        for pos in range(4):
+            score = Counter()
+            for d in f[pos]:
+                score[d] += 2
+            for d in h.get(pos, []):
+                score[str(d)] += 1.5
+            score[last_draw_digits[pos]] += 3
+            for d in top_backtest[pos]:
+                score[d] += 2.5
+            ranked = score.most_common()
+            final.append([d for d,_ in ranked[:5]])
+        return final
 
-    # --- Tab 4: Draw List ---
-    with tabs[3]:
-        st.header("📃 Senarai Draw")
-        st.dataframe(df_draws)
+    if method == 'smartpattern':
+        settings = [
+            ('coreboost', 60),
+            ('hybrid', 45),
+            ('frequency', 50),
+            ('coreplus', 60),
+        ]
+        result = []
+        for idx, (strat, n) in enumerate(settings):
+            base = generate_base(draws, strat, n)
+            result.append(base[idx])
+        return result
 
-    # --- Tab 5: Wheelpick ---
-    with tabs[4]:
-        st.header("🎡 Wheelpick")
-        show_wheelpick_tab(draw_list)
-
-    # --- Tab 6: Hit Frequency ---
-    with tabs[5]:
-        show_hit_frequency_tab(draw_list)
-
-    # --- Tab 7: Last Hit ---
-    with tabs[6]:
-        show_last_hit_tab(df_draws)
-
-if __name__ == "__main__":
-    main()
+    if method == 'hitfq':
+        print("[DEBUG] Entering 'hitfq' branch")
+        recent_draws = draws[-recent_n:]
+        counters = [Counter() for _ in range(4)]
+        for draw in recent_draws:
+            for i, digit in enumerate(draw['number']):
+                counters[i][digit] += 1
+        base = []
+        for c in counters:
+            top = c.most_common()
+            ranked = sorted(top, key=lambda x: (-x[1], int(x[0])))
+            base.append([d for d, _ in ranked[:5]])
+        print(f"[DEBUG] hitfq base result: {base}")
+        return base
