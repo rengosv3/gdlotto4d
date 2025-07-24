@@ -11,7 +11,6 @@ def match_insight(fp: str, base: list[list[str]], reverse: bool = False) -> list
     digits = list(fp)
     if reverse:
         digits = digits[::-1]
-        base = base[::-1]
     return ["✅" if digits[i] in base[i] else "❌" for i in range(4)]
 
 def run_backtest(

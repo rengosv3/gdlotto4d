@@ -90,7 +90,6 @@ with tabs[0]:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
                 if arah == "Kanan→Kiri":
                     fp = last['number'][::-1]
-                    base = base[::-1]
                 else:
                     fp = last['number']
                 flags = ["✅" if fp[i] in base[i] else "❌" for i in range(4)]
