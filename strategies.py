@@ -3,12 +3,10 @@ import itertools
 from collections import Counter
 
 def generate_base(draws, method='frequency', recent_n=50):
-    """
-    Returns a list of 4 lists (one per digit position), each containing top-5 candidate digits.
-    methods: 'frequency','gap','hybrid','qaisara','smartpattern'
-    recent_n: number of latest draws to consider (where applicable)
-    Raises ValueError on insufficient data or unknown method.
-    """
+    # Debug: tunjuk lokasi file dan method yang dipanggil
+    print(f"[DEBUG] strategies.py loaded from: {__file__}")
+    print(f"[DEBUG] generate_base called with method='{method}', recent_n={recent_n}, total_draws={len(draws)}")
+
     total = len(draws)
     # Minimum requirements
     requirements = {
@@ -16,7 +14,8 @@ def generate_base(draws, method='frequency', recent_n=50):
         'gap': 120,
         'hybrid': recent_n,
         'qaisara': 60,
-        'smartpattern': 60
+        'smartpattern': 60,
+        'hitfq': recent_n
     }
     if method not in requirements:
         raise ValueError(f"Unknown strategy '{method}'")
@@ -32,12 +31,10 @@ def generate_base(draws, method='frequency', recent_n=50):
         return [[d for d,_ in c.most_common(5)] for c in counters]
 
     def gap_method(draws_slice):
-        # Step 1: freq over last 120
         freq_120 = [Counter() for _ in range(4)]
         for draw in draws_slice[-120:]:
             for i, d in enumerate(draw['number']):
                 freq_120[i][d] += 1
-        # exclude top & bottom to get 8
         top_digits = []
         for cnt in freq_120:
             mc = cnt.most_common(10)
@@ -46,8 +43,6 @@ def generate_base(draws, method='frequency', recent_n=50):
             else:
                 filtered = [d for d,_ in mc if d not in (mc[0][0], mc[-1][0])]
                 top_digits.append(filtered[:8])
-
-        # Step 2: last-10 draws exclusions
         recent10 = draws_slice[-10:]
         recent_top = [Counter() for _ in range(4)]
         recent_seen = [set() for _ in range(4)]
@@ -55,8 +50,6 @@ def generate_base(draws, method='frequency', recent_n=50):
             for i, d in enumerate(draw['number']):
                 recent_top[i][d] += 1
                 recent_seen[i].add(d)
-
-        # Build final gap lists
         gap_res = []
         for i in range(4):
             excluded = set([d for d,_ in recent_top[i].most_common(2)]) | recent_seen[i]
@@ -81,7 +74,6 @@ def generate_base(draws, method='frequency', recent_n=50):
         return combined
 
     if method == 'qaisara':
-        # combine frequency, gap, hybrid
         f = freq_method(draws, recent_n)
         g = gap_method(draws)
         h = generate_base(draws, 'hybrid', recent_n)
@@ -93,21 +85,36 @@ def generate_base(draws, method='frequency', recent_n=50):
             score.update(h[pos])
             ranked = score.most_common()
             if len(ranked) > 2:
-                ranked = ranked[1:-1]  # drop top & bottom outliers
+                ranked = ranked[1:-1]
             final.append([d for d,_ in ranked[:5]])
         return final
 
     if method == 'smartpattern':
-        # pick from different strategies/settings
         settings = [
-            ('qaisara', 60),   # for P1
-            ('hybrid', 45),    # for P2
-            ('frequency', 50), # for P3
-            ('hybrid', 35),    # for P4
+            ('qaisara', 60),
+            ('hybrid', 45),
+            ('frequency', 50),
+            ('hybrid', 35),
         ]
         result = []
         for idx, (strat, n) in enumerate(settings):
             base = generate_base(draws, strat, n)
-            # take the idx-th pick from that base
             result.append(base[idx])
         return result
+
+    if method == 'hitfq':
+        # Debug: sahkan kita masuk branch hitfq
+        print("[DEBUG] Entering 'hitfq' branch")
+        recent_draws = draws[-recent_n:]
+        counters = [Counter() for _ in range(4)]
+        for draw in recent_draws:
+            for i, digit in enumerate(draw['number']):
+                counters[i][digit] += 1
+        base = []
+        for c in counters:
+            top = c.most_common()
+            ranked = sorted(top, key=lambda x: (-x[1], int(x[0])))
+            base.append([d for d, _ in ranked[:5]])
+        # Debug: tunjuk hasil base hitfq
+        print(f"[DEBUG] hitfq base result: {base}")
+        return base
