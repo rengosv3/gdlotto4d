@@ -1,146 +1,201 @@
-# strategies.py
+import streamlit as st
+import pandas as pd
 
-import itertools
-from collections import Counter
-from last_hit_method import last_hit_method  # pastikan fail ini ada
+from utils import (
+    get_draw_countdown_from_last_8pm,
+    load_draws,
+    load_base_from_file
+)
+from draw_scraper import update_draws
+from strategies import generate_base
+from prediction import generate_predictions_from_base
+from backtest import run_backtest
+from wheelpick import (
+    get_like_dislike_digits,
+    generate_wheel_combos,
+    filter_wheel_combos,
+    parse_manual_base
+)
 
-def generate_base(draws, method='frequency', recent_n=50):
-    print(f"[DEBUG] strategies.py loaded from: {__file__}")
-    print(f"[DEBUG] generate_base called with method='{method}', recent_n={recent_n}, total_draws={len(draws)}")
+st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
+st.title("🔮 Breakcode4D Predictor (GD Lotto)")
+st.markdown(f"⏳ Next draw in: `{str(get_draw_countdown_from_last_8pm()).split('.')[0]}`")
 
-    total = len(draws)
-    requirements = {
-        'frequency': recent_n,
-        'gap': 120,
-        'hybrid': recent_n,
-        'coreboost': 60,
-        'coreplus': 60,
-        'smartpattern': 60,
-        'hitfq': recent_n
-    }
+# -- Update draws & base --
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("📥 Update Draw Terkini"):
+        msg = update_draws()
+        st.success(msg)
+        st.markdown("### 📋 Base Hari Ini")
+        base_txt = load_base_from_file()
+        st.code('\n'.join([' '.join(p) for p in base_txt]) or "Tiada base.", language='text')
+with col2:
+    st.markdown("""
+    <a href="https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845" target="_blank">
+      <button style="width:100%;padding:0.6em;font-size:16px;background:#4CAF50;color:white;border:none;border-radius:5px;">
+        📝 Register Sini Batman 11 dan dapatkan BONUS!!!
+      </button>
+    </a>
+    """, unsafe_allow_html=True)
 
-    if method not in requirements:
-        raise ValueError(f"Unknown strategy '{method}'")
-    if total < requirements[method]:
-        raise ValueError(f"Not enough draws for '{method}' (need {requirements[method]}, have {total})")
+# -- Load draws --
+draws = load_draws()
+if not draws:
+    st.warning("⚠️ Sila klik 'Update Draw Terkini' untuk mula.")
+    st.stop()
 
-    # ---------- Helper methods ----------
-    def freq_method(draws_slice, n):
-        counters = [Counter() for _ in range(4)]
-        for d in draws_slice[-n:]:
-            for i, digit in enumerate(d['number']):
-                counters[i][digit] += 1
-        return [[d for d,_ in c.most_common(5)] for c in counters]
+st.info(f"📅 Tarikh terakhir: **{draws[-1]['date']}** | 📊 Jumlah draw: **{len(draws)}**")
 
-    def gap_method(draws_slice):
-        freq_120 = [Counter() for _ in range(4)]
-        for draw in draws_slice[-120:]:
-            for i, d in enumerate(draw['number']):
-                freq_120[i][d] += 1
-        top_digits = []
-        for cnt in freq_120:
-            mc = cnt.most_common(10)
-            if len(mc) < 3:
-                top_digits.append([d for d,_ in mc])
-            else:
-                filtered = [d for d,_ in mc if d not in (mc[0][0], mc[-1][0])]
-                top_digits.append(filtered[:8])
-        recent10 = draws_slice[-10:]
-        recent_top = [Counter() for _ in range(4)]
-        recent_seen = [set() for _ in range(4)]
-        for draw in recent10:
-            for i, d in enumerate(draw['number']):
-                recent_top[i][d] += 1
-                recent_seen[i].add(d)
-        gap_res = []
+# -- Tabs --
+tabs = st.tabs(["Insight", "Ramalan", "Backtest", "Draw List", "Wheelpick"])
+
+# --- Tab 1: Insight ---
+with tabs[0]:
+    st.header("📌 Insight Terakhir")
+    last = draws[-1]
+    try:
+        base_last = load_base_from_file('data/base_last.txt')
+    except:
+        base_last = []
+    if not base_last:
+        st.warning("⚠️ Base terakhir belum wujud. Update dulu.")
+    else:
+        st.markdown(f"**Tarikh Draw:** `{last['date']}`  \n**1st Prize:** `{last['number']}`")
+        cols = st.columns(4)
         for i in range(4):
-            excluded = set([d for d,_ in recent_top[i].most_common(2)]) | recent_seen[i]
-            final = [d for d in top_digits[i] if d not in excluded]
-            gap_res.append(final[:5])
-        return gap_res
+            dig = last['number'][i]
+            if dig in base_last[i]:
+                cols[i].success(f"P{i+1}: ✅ `{dig}`")
+            else:
+                cols[i].error(f"P{i+1}: ❌ `{dig}`")
 
-    # ---------- Strategies ----------
-    if method == 'frequency':
-        return freq_method(draws, recent_n)
+        st.markdown("---")
+        st.subheader("Perbandingan Strategi")
+        arah = st.radio("Arah Digit:", ["Kiri→Kanan", "Kanan→Kiri"], key="insight_dir")
+        recent_n = st.slider("Draw untuk base:", 10, 100, 50, 5, key="insight_n")
+        rows = []
+        strategies = ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq']
+        for strat in strategies:
+            try:
+                base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
+                if arah == "Kanan→Kiri":
+                    fp = last['number'][::-1]
+                    base = base[::-1]
+                else:
+                    fp = last['number']
+                flags = ["✅" if fp[i] in base[i] else "❌" for i in range(4)]
+                rows.append({
+                    "Strategi": strat,
+                    "P1": flags[0], "P2": flags[1],
+                    "P3": flags[2], "P4": flags[3],
+                    "✅ Total": flags.count("✅")
+                })
+            except Exception:
+                pass
+        if rows:
+            df_insight = pd.DataFrame(rows).sort_values("✅ Total", ascending=False)
+            st.dataframe(df_insight, use_container_width=True)
+        else:
+            st.warning("❗ Tidak cukup data untuk perbandingan.")
 
-    if method == 'gap':
-        return gap_method(draws)
+# --- Tab 2: Ramalan ---
+with tabs[1]:
+    st.header("🧠 Ramalan Base")
+    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq'], key="pred_strat")
+    recent_n2 = st.slider("Draw terkini:", 5, 120, 30, 5, key="pred_n")
+    try:
+        base = generate_base(draws, method=strat, recent_n=recent_n2)
+        for i, p in enumerate(base, start=1):
+            st.text(f"P{i}: {' '.join(p)}")
+        preds = generate_predictions_from_base(base, max_preds=10)
+        st.markdown("**🔢 Top 10 Ramalan:**")
+        st.code('\n'.join(preds), language='text')
+    except Exception as e:
+        st.error(str(e))
 
-    if method == 'hybrid':
-        f = freq_method(draws, recent_n)
-        g = gap_method(draws)
-        combined = []
-        for f_list, g_list in zip(f, g):
-            cnt = Counter(f_list + g_list)
-            combined.append([d for d,_ in cnt.most_common(5)])
-        return combined
+# --- Tab 3: Backtest ---
+with tabs[2]:
+    st.header("🔁 Backtest Base")
+    arah_bt = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="bt_dir")
+    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq'], key="bt_strat")
+    n_bt = st.slider("Draw untuk base:", 5, 120, 30, 5, key="bt_n")
+    rounds = st.slider("Bilangan backtest:", 5, 50, 10, key="bt_rounds")
+    if st.button("🚀 Jalankan Backtest", key="bt_run"):
+        try:
+            dir_flag = 'right' if arah_bt == "Kanan→Kiri" else 'left'
+            df_bt, matched = run_backtest(
+                draws, strategy=strat_bt, recent_n=n_bt,
+                arah=dir_flag, backtest_rounds=rounds
+            )
+            st.success(f"🎯 Matched: {matched} daripada {rounds}")
+            st.dataframe(df_bt, use_container_width=True)
+        except Exception as e:
+            st.error(str(e))
 
-    if method == 'coreboost':
-        f = freq_method(draws, recent_n)
-        h = last_hit_method(draws, recent_n)
-        last_draw_digits = [d for d in draws[-1]['number']]
+# --- Tab 4: Draw List ---
+with tabs[3]:
+    st.header("📋 Senarai Draw")
+    st.dataframe(pd.DataFrame(draws), use_container_width=True)
 
-        final = []
-        for pos in range(4):
-            score = Counter()
-            for d in f[pos]:
-                score[d] += 2
-            for d in h.get(pos, []):
-                score[str(d)] += 1.5
-            score[last_draw_digits[pos]] += 3
-            ranked = score.most_common()
-            final.append([d for d,_ in ranked[:5]])
-        return final
+# --- Tab 5: Wheelpick ---
+with tabs[4]:
+    st.header("🎡 Wheelpick Generator")
+    arah_wp = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="wp_dir")
+    mode = st.radio("Mod Input Base:", ["Auto (dari Base)","Manual Input"], key="wp_mode")
 
-    if method == 'coreplus':
-        f = freq_method(draws, recent_n)
-        h = last_hit_method(draws, recent_n)
-        last_draw_digits = [d for d in draws[-1]['number']]
-        recent_backtest = draws[-30:]
-        backtest_counters = [Counter() for _ in range(4)]
-        for d in recent_backtest:
-            for i, digit in enumerate(d['number']):
-                backtest_counters[i][digit] += 1
-        top_backtest = [[d for d,_ in c.most_common(3)] for c in backtest_counters]
+    like, dislike = get_like_dislike_digits(draws)
+    st.markdown(f"👍 Like: `{like}`    👎 Dislike: `{dislike}`")
+    user_like = st.text_input("Digit Like:", value=' '.join(like), key="wp_like")
+    user_dislike = st.text_input("Digit Dislike:", value=' '.join(dislike), key="wp_dislike")
+    likes = user_like.split()
+    dislikes = user_dislike.split()
 
-        final = []
-        for pos in range(4):
-            score = Counter()
-            for d in f[pos]:
-                score[d] += 2
-            for d in h.get(pos, []):
-                score[str(d)] += 1.5
-            score[last_draw_digits[pos]] += 3
-            for d in top_backtest[pos]:
-                score[d] += 2.5
-            ranked = score.most_common()
-            final.append([d for d,_ in ranked[:5]])
-        return final
+    if mode == "Auto (dari Base)":
+        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq'], key="wp_strat")
+        recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
+        try:
+            base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
+        except Exception as e:
+            st.error(str(e))
+            st.stop()
+    else:
+        st.markdown("**Masukkan 4 baris, setiap baris 5 digit tunggal (pisahkan dengan ruang):**")
+        manual_inputs = []
+        for i in range(4):
+            txt = st.text_input(f"Posisi {i+1}", key=f"manual_base_{i}")
+            manual_inputs.append(txt)
+        try:
+            base_wp = parse_manual_base(manual_inputs)
+            st.success("Input manual base sah.")
+        except ValueError as ve:
+            st.error(str(ve))
+            st.stop()
 
-    if method == 'smartpattern':
-        settings = [
-            ('coreboost', 60),
-            ('hybrid', 45),
-            ('frequency', 50),
-            ('coreplus', 60),
-        ]
-        result = []
-        for idx, (strat, n) in enumerate(settings):
-            base = generate_base(draws, strat, n)
-            result.append(base[idx])
-        return result
+    lot = st.text_input("Nilai Lot:", value="0.10", key="wp_lot")
 
-    if method == 'hitfq':
-        print("[DEBUG] Entering 'hitfq' branch")
-        recent_draws = draws[-recent_n:]
-        counters = [Counter() for _ in range(4)]
-        for draw in recent_draws:
-            for i, digit in enumerate(draw['number']):
-                counters[i][digit] += 1
-        base = []
-        for c in counters:
-            top = c.most_common()
-            ranked = sorted(top, key=lambda x: (-x[1], int(x[0])))
-            base.append([d for d, _ in ranked[:5]])
-        print(f"[DEBUG] hitfq base result: {base}")
-        return base
+    with st.expander("⚙️ Tapisan Tambahan"):
+        no_repeat = st.checkbox("Buang digit ulang", key="f1")
+        no_triple = st.checkbox("Buang triple", key="f2")
+        no_pair = st.checkbox("Buang pair", key="f3")
+        no_ascend = st.checkbox("Buang menaik", key="f4")
+        use_history = st.checkbox("Buang pernah keluar", key="f5")
+        sim_limit = st.slider("Max sama dgn last draw:", 0, 4, 2, key="f6")
+
+    if st.button("🎰 Create Wheelpick", key="wp_run"):
+        combos = generate_wheel_combos(base_wp, lot=lot)
+        st.info(f"Sebelum tapis: {len(combos)}")
+        filtered = filter_wheel_combos(
+            combos, draws,
+            no_repeat, no_triple, no_pair, no_ascend,
+            use_history, sim_limit,
+            likes, dislikes
+        )
+        st.success(f"Selepas tapis: {len(filtered)}")
+        for i in range(0, len(filtered), 30):
+            part = filtered[i:i+30]
+            st.markdown(f"**Bahagian {(i//30)+1}:**")
+            st.code('\n'.join(part), language='text')
+        data = '\n'.join(filtered).encode()
+        st.download_button("💾 Muat Turun", data=data,
+                           file_name="wheelpick.txt", mime="text/plain")
