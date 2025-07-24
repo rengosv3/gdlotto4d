@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 import pandas as pd
 
@@ -100,8 +102,8 @@ with tabs[0]:
                     "P3": flags[2], "P4": flags[3],
                     "✅ Total": flags.count("✅")
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                st.warning(f"⚠️ Strategi `{strat}` gagal: {e}")
 
         if rows:
             df_insight = pd.DataFrame(rows).sort_values("✅ Total", ascending=False)
