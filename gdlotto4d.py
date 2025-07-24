@@ -1,3 +1,4 @@
+# gdlotto4d.py
 import streamlit as st
 import pandas as pd
 
@@ -75,7 +76,7 @@ with tabs[0]:
         arah = st.radio("Arah Digit:", ["Kiri→Kanan", "Kanan→Kiri"], key="insight_dir")
         recent_n = st.slider("Draw untuk base:", 10, 100, 50, 5, key="insight_n")
         rows = []
-        strategies = ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq']
+        strategies = ['frequency','gap','hybrid','qaisara','smartpattern']
         for strat in strategies:
             try:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
@@ -102,7 +103,7 @@ with tabs[0]:
 # --- Tab 2: Ramalan ---
 with tabs[1]:
     st.header("🧠 Ramalan Base")
-    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq'], key="pred_strat")
+    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="pred_strat")
     recent_n2 = st.slider("Draw terkini:", 5, 120, 30, 5, key="pred_n")
     try:
         base = generate_base(draws, method=strat, recent_n=recent_n2)
@@ -118,12 +119,12 @@ with tabs[1]:
 with tabs[2]:
     st.header("🔁 Backtest Base")
     arah_bt = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="bt_dir")
-    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq'], key="bt_strat")
+    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="bt_strat")
     n_bt = st.slider("Draw untuk base:", 5, 120, 30, 5, key="bt_n")
     rounds = st.slider("Bilangan backtest:", 5, 50, 10, key="bt_rounds")
     if st.button("🚀 Jalankan Backtest", key="bt_run"):
         try:
-            dir_flag = 'right' if arah_bt == "Kanan→Kiri" else 'left'
+            dir_flag = 'right' if arah_bt=="Kanan→Kanan" else 'left'
             df_bt, matched = run_backtest(
                 draws, strategy=strat_bt, recent_n=n_bt,
                 arah=dir_flag, backtest_rounds=rounds
@@ -151,8 +152,9 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
+    # Pilih base
     if mode == "Auto (dari Base)":
-        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','coreboost','coreplus','smartpattern','hitfq'], key="wp_strat")
+        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
         recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
         try:
             base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
