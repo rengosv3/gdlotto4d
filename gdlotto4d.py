@@ -1,4 +1,3 @@
-# gdlotto4d.py
 import streamlit as st
 import pandas as pd
 
@@ -14,15 +13,16 @@ from backtest import run_backtest
 from wheelpick import (
     get_like_dislike_digits,
     generate_wheel_combos,
-    filter_wheel_combos,
-    parse_manual_base
+    filter_wheel_combos
 )
+from hit_frequency import show_hit_frequency_tab
+from last_hit import show_last_hit_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto)")
 st.markdown(f"⏳ Next draw in: `{str(get_draw_countdown_from_last_8pm()).split('.')[0]}`")
 
-# -- Update draws & base --
+# Update draws & base
 col1, col2 = st.columns(2)
 with col1:
     if st.button("📥 Update Draw Terkini"):
@@ -40,18 +40,24 @@ with col2:
     </a>
     """, unsafe_allow_html=True)
 
-# -- Load draws --
+# Load draws
 draws = load_draws()
 if not draws:
     st.warning("⚠️ Sila klik 'Update Draw Terkini' untuk mula.")
     st.stop()
 
 st.info(f"📅 Tarikh terakhir: **{draws[-1]['date']}** | 📊 Jumlah draw: **{len(draws)}**")
+tabs = st.tabs([
+    "Insight",
+    "Ramalan",
+    "Backtest",
+    "Draw List",
+    "Wheelpick",
+    "Hit Frequency",
+    "Last Hit"
+])
 
-# -- Tabs --
-tabs = st.tabs(["Insight", "Ramalan", "Backtest", "Draw List", "Wheelpick"])
-
-# --- Tab 1: Insight ---
+# Tab 1: Insight
 with tabs[0]:
     st.header("📌 Insight Terakhir")
     last = draws[-1]
@@ -76,7 +82,7 @@ with tabs[0]:
         arah = st.radio("Arah Digit:", ["Kiri→Kanan", "Kanan→Kiri"], key="insight_dir")
         recent_n = st.slider("Draw untuk base:", 10, 100, 50, 5, key="insight_n")
         rows = []
-        strategies = ['frequency','gap','hybrid','qaisara','smartpattern']
+        strategies = ['frequency','gap','hybrid','supercombo','smartpattern']
         for strat in strategies:
             try:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
@@ -100,10 +106,10 @@ with tabs[0]:
         else:
             st.warning("❗ Tidak cukup data untuk perbandingan.")
 
-# --- Tab 2: Ramalan ---
+# Tab 2: Ramalan
 with tabs[1]:
     st.header("🧠 Ramalan Base")
-    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="pred_strat")
+    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','supercombo','smartpattern'], key="pred_strat")
     recent_n2 = st.slider("Draw terkini:", 5, 120, 30, 5, key="pred_n")
     try:
         base = generate_base(draws, method=strat, recent_n=recent_n2)
@@ -115,36 +121,34 @@ with tabs[1]:
     except Exception as e:
         st.error(str(e))
 
-# --- Tab 3: Backtest ---
+# Tab 3: Backtest
 with tabs[2]:
     st.header("🔁 Backtest Base")
     arah_bt = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="bt_dir")
-    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="bt_strat")
+    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','supercombo','smartpattern'], key="bt_strat")
     n_bt = st.slider("Draw untuk base:", 5, 120, 30, 5, key="bt_n")
     rounds = st.slider("Bilangan backtest:", 5, 50, 10, key="bt_rounds")
     if st.button("🚀 Jalankan Backtest", key="bt_run"):
         try:
-            dir_flag = 'right' if arah_bt=="Kanan→Kanan" else 'left'
             df_bt, matched = run_backtest(
                 draws, strategy=strat_bt, recent_n=n_bt,
-                arah=dir_flag, backtest_rounds=rounds
+                arah='right' if arah_bt=="Kanan→Kiri" else 'left',
+                backtest_rounds=rounds
             )
             st.success(f"🎯 Matched: {matched} daripada {rounds}")
             st.dataframe(df_bt, use_container_width=True)
         except Exception as e:
             st.error(str(e))
 
-# --- Tab 4: Draw List ---
+# Tab 4: Draw List
 with tabs[3]:
     st.header("📋 Senarai Draw")
     st.dataframe(pd.DataFrame(draws), use_container_width=True)
 
-# --- Tab 5: Wheelpick ---
+# Tab 5: Wheelpick
 with tabs[4]:
     st.header("🎡 Wheelpick Generator")
     arah_wp = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="wp_dir")
-    mode = st.radio("Mod Input Base:", ["Auto (dari Base)","Manual Input"], key="wp_mode")
-
     like, dislike = get_like_dislike_digits(draws)
     st.markdown(f"👍 Like: `{like}`    👎 Dislike: `{dislike}`")
     user_like = st.text_input("Digit Like:", value=' '.join(like), key="wp_like")
@@ -152,9 +156,10 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
-    # Pilih base
-    if mode == "Auto (dari Base)":
-        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
+    input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
+
+    if input_mode == "Auto dari strategi":
+        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','supercombo','smartpattern'], key="wp_strat")
         recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
         try:
             base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
@@ -162,16 +167,13 @@ with tabs[4]:
             st.error(str(e))
             st.stop()
     else:
-        st.markdown("**Masukkan 4 baris, setiap baris 5 digit tunggal (pisahkan dengan ruang):**")
-        manual_inputs = []
-        for i in range(4):
-            txt = st.text_input(f"Posisi {i+1}", key=f"manual_base_{i}")
-            manual_inputs.append(txt)
+        manual_base = st.text_area("Masukkan Base Manual (4 baris, digit pisah space)", height=120, key="wp_manual")
         try:
-            base_wp = parse_manual_base(manual_inputs)
-            st.success("Input manual base sah.")
-        except ValueError as ve:
-            st.error(str(ve))
+            base_wp = [line.strip().split() for line in manual_base.strip().split('\n')]
+            if len(base_wp) != 4 or any(not p for p in base_wp):
+                raise ValueError("Format base tak sah.")
+        except Exception as e:
+            st.error(f"Base manual error: {str(e)}")
             st.stop()
 
     lot = st.text_input("Nilai Lot:", value="0.10", key="wp_lot")
@@ -201,3 +203,11 @@ with tabs[4]:
         data = '\n'.join(filtered).encode()
         st.download_button("💾 Muat Turun", data=data,
                            file_name="wheelpick.txt", mime="text/plain")
+
+# Tab 6: Hit Frequency
+with tabs[5]:
+    show_hit_frequency_tab(draws)
+
+# Tab 7: Last Hit
+with tabs[6]:
+    show_last_hit_tab(draws)
