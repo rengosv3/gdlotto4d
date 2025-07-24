@@ -6,11 +6,11 @@ import os
 def show_last_hit_tab(draws):
     st.header("📅 Last Hit Digit")
 
-    # Slider untuk jumlah draw
+    # Slider jumlah draw
     max_draws = max(10, min(120, len(draws)))
     n_draws = st.slider("Jumlah draw terkini:", 10, max_draws, 60, step=5, key="lh_draws")
 
-    # Pilihan posisi
+    # Checkbox posisi
     position_checks = [
         ("P1", st.checkbox("P1", value=True, key="lh_p1")),
         ("P2", st.checkbox("P2", value=True, key="lh_p2")),
@@ -27,7 +27,7 @@ def show_last_hit_tab(draws):
     recent_draws = draws[-n_draws:]
     last_hit_map = defaultdict(lambda: {"date": None, "index": None})
 
-    # Cari tarikh terakhir digit muncul
+    # Proses setiap draw dari belakang
     for idx in reversed(range(len(recent_draws))):
         draw = recent_draws[idx]
         num_str = str(draw["number"]).zfill(4)  # Pastikan 4 digit
@@ -39,8 +39,8 @@ def show_last_hit_tab(draws):
                     last_hit_map[digit]["date"] = draw["date"]
                     last_hit_map[digit]["index"] = idx
 
-    # Sediakan dataframe
-    all_digits = [f"{i}" for i in range(10)]
+    # Buat senarai 0–9
+    all_digits = [str(i) for i in range(10)]
     rows = []
     for digit in all_digits:
         info = last_hit_map.get(digit, {"date": None, "index": None})
@@ -52,6 +52,7 @@ def show_last_hit_tab(draws):
             "Games Skipped": skipped
         })
 
+    # Tunjuk dalam DataFrame
     df = pd.DataFrame(rows)
     df.sort_values(["Games Skipped", "Number"], ascending=[False, True], inplace=True)
     df.insert(0, "Rank", range(1, len(df) + 1))
