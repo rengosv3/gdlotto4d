@@ -34,7 +34,7 @@ def run_backtest(
     """
     total = len(draws)
     # keperluan minimum per strategi
-    min_req = {'frequency':50, 'gap':120, 'hybrid':50, 'qaisara':60, 'smartpattern':60, 'hitfq':50}
+    min_req = {'frequency':50, 'gap':120, 'hybrid':50, 'qaisara':60, 'smartpattern':60}
     req = min_req.get(strategy, 50)
     if total < backtest_rounds + req:
         raise ValueError(f"Not enough draws for backtest '{strategy}': "

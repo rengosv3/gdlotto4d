@@ -3,10 +3,12 @@ import itertools
 from collections import Counter
 
 def generate_base(draws, method='frequency', recent_n=50):
-    # Debug: tunjuk lokasi file dan method yang dipanggil
-    print(f"[DEBUG] strategies.py loaded from: {__file__}")
-    print(f"[DEBUG] generate_base called with method='{method}', recent_n={recent_n}, total_draws={len(draws)}")
-
+    """
+    Returns a list of 4 lists (one per digit position), each containing top-5 candidate digits.
+    methods: 'frequency','gap','hybrid','qaisara','smartpattern','hitfq'
+    recent_n: number of latest draws to consider (where applicable)
+    Raises ValueError on insufficient data or unknown method.
+    """
     total = len(draws)
     # Minimum requirements
     requirements = {
@@ -85,16 +87,16 @@ def generate_base(draws, method='frequency', recent_n=50):
             score.update(h[pos])
             ranked = score.most_common()
             if len(ranked) > 2:
-                ranked = ranked[1:-1]
+                ranked = ranked[1:-1]  # drop top & bottom
             final.append([d for d,_ in ranked[:5]])
         return final
 
     if method == 'smartpattern':
         settings = [
-            ('qaisara', 60),
-            ('hybrid', 45),
-            ('frequency', 50),
-            ('hybrid', 35),
+            ('qaisara', 60),   # for P1
+            ('hybrid', 45),    # for P2
+            ('frequency', 50), # for P3
+            ('hybrid', 35),    # for P4
         ]
         result = []
         for idx, (strat, n) in enumerate(settings):
@@ -103,8 +105,6 @@ def generate_base(draws, method='frequency', recent_n=50):
         return result
 
     if method == 'hitfq':
-        # Debug: sahkan kita masuk branch hitfq
-        print("[DEBUG] Entering 'hitfq' branch")
         recent_draws = draws[-recent_n:]
         counters = [Counter() for _ in range(4)]
         for draw in recent_draws:
@@ -115,6 +115,4 @@ def generate_base(draws, method='frequency', recent_n=50):
             top = c.most_common()
             ranked = sorted(top, key=lambda x: (-x[1], int(x[0])))
             base.append([d for d, _ in ranked[:5]])
-        # Debug: tunjuk hasil base hitfq
-        print(f"[DEBUG] hitfq base result: {base}")
         return base
