@@ -82,7 +82,7 @@ with tabs[0]:
         arah = st.radio("Arah Digit:", ["Kiri→Kanan", "Kanan→Kiri"], key="insight_dir")
         recent_n = st.slider("Draw untuk base:", 10, 100, 50, 5, key="insight_n")
         rows = []
-        strategies = ['frequency','gap','hybrid','supercombo','smartpattern']
+        strategies = ['frequency','gap','hybrid','qaisara','smartpattern']
         for strat in strategies:
             try:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
@@ -109,7 +109,7 @@ with tabs[0]:
 # Tab 2: Ramalan
 with tabs[1]:
     st.header("🧠 Ramalan Base")
-    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','supercombo','smartpattern'], key="pred_strat")
+    strat = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="pred_strat")
     recent_n2 = st.slider("Draw terkini:", 5, 120, 30, 5, key="pred_n")
     try:
         base = generate_base(draws, method=strat, recent_n=recent_n2)
@@ -125,7 +125,7 @@ with tabs[1]:
 with tabs[2]:
     st.header("🔁 Backtest Base")
     arah_bt = st.radio("Arah:", ["Kiri→Kanan","Kanan→Kiri"], key="bt_dir")
-    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','supercombo','smartpattern'], key="bt_strat")
+    strat_bt = st.selectbox("Strategi:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="bt_strat")
     n_bt = st.slider("Draw untuk base:", 5, 120, 30, 5, key="bt_n")
     rounds = st.slider("Bilangan backtest:", 5, 50, 10, key="bt_rounds")
     if st.button("🚀 Jalankan Backtest", key="bt_run"):
@@ -156,10 +156,11 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
+    # Manual vs Auto toggle
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
 
     if input_mode == "Auto dari strategi":
-        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','supercombo','smartpattern'], key="wp_strat")
+        strat_wp = st.selectbox("Strategi Base:", ['frequency','gap','hybrid','qaisara','smartpattern'], key="wp_strat")
         recent_wp = st.slider("Draw untuk base:", 5, 120, 30, 5, key="wp_n")
         try:
             base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
@@ -207,7 +208,7 @@ with tabs[4]:
 # Tab 6: Hit Frequency
 with tabs[5]:
     show_hit_frequency_tab(draws)
-
+    
 # Tab 7: Last Hit
 with tabs[6]:
     show_last_hit_tab(draws)

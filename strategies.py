@@ -1,20 +1,19 @@
 # strategies.py
-
 import itertools
 from collections import Counter
-from last_hit_method import last_hit_method  # modul tambahan
 
 def generate_base(draws, method='frequency', recent_n=50):
-    # Debug
+    # Debug: tunjuk lokasi file dan method yang dipanggil
     print(f"[DEBUG] strategies.py loaded from: {__file__}")
     print(f"[DEBUG] generate_base called with method='{method}', recent_n={recent_n}, total_draws={len(draws)}")
 
     total = len(draws)
+    # Minimum requirements
     requirements = {
         'frequency': recent_n,
         'gap': 120,
         'hybrid': recent_n,
-        'coreboost': 60,
+        'qaisara': 60,
         'smartpattern': 60,
         'hitfq': recent_n
     }
@@ -74,30 +73,25 @@ def generate_base(draws, method='frequency', recent_n=50):
             combined.append([d for d,_ in cnt.most_common(5)])
         return combined
 
-    if method == 'coreboost':
+    if method == 'qaisara':
         f = freq_method(draws, recent_n)
-        h = last_hit_method(draws, recent_n)
-        last_draw_digits = [d for d in draws[-1]['number']]  # digit terakhir
-
+        g = gap_method(draws)
+        h = generate_base(draws, 'hybrid', recent_n)
         final = []
         for pos in range(4):
             score = Counter()
-
-            # Skor berdasarkan kepentingan
-            for d in f[pos]:
-                score[d] += 2
-            for d in h.get(pos, []):
-                score[str(d)] += 1.5
-            score[last_draw_digits[pos]] += 3
-
+            score.update(f[pos])
+            score.update(g[pos])
+            score.update(h[pos])
             ranked = score.most_common()
+            if len(ranked) > 2:
+                ranked = ranked[1:-1]
             final.append([d for d,_ in ranked[:5]])
-
         return final
 
     if method == 'smartpattern':
         settings = [
-            ('coreboost', 60),     # Dahulunya qaisara
+            ('qaisara', 60),
             ('hybrid', 45),
             ('frequency', 50),
             ('hybrid', 35),
@@ -109,6 +103,7 @@ def generate_base(draws, method='frequency', recent_n=50):
         return result
 
     if method == 'hitfq':
+        # Debug: sahkan kita masuk branch hitfq
         print("[DEBUG] Entering 'hitfq' branch")
         recent_draws = draws[-recent_n:]
         counters = [Counter() for _ in range(4)]
@@ -120,5 +115,6 @@ def generate_base(draws, method='frequency', recent_n=50):
             top = c.most_common()
             ranked = sorted(top, key=lambda x: (-x[1], int(x[0])))
             base.append([d for d, _ in ranked[:5]])
+        # Debug: tunjuk hasil base hitfq
         print(f"[DEBUG] hitfq base result: {base}")
         return base
