@@ -225,6 +225,6 @@ with tabs[5]:
 with tabs[6]:
     show_last_hit_tab(draws)
     
-# Dalam `tabs[5]` atau mana-mana:
-with tabs[5]:
+# Tab 8: Sigit Rank
+with tabs[7]:
     show_combined_insight_tab(draws)
