@@ -1,5 +1,3 @@
-# strategies.py
-
 import pandas as pd
 from collections import Counter, defaultdict
 from wheelpick import get_like_dislike_digits
@@ -29,12 +27,12 @@ def generate_base(draws, method='frequency', recent_n=50):
         return [[d for d, _ in c.most_common(5)] for c in counters]
 
     def gap_method(draws_slice):
-        freq_30 = [Counter() for _ in range(4)]
+        freq_120 = [Counter() for _ in range(4)]
         for draw in draws_slice[-30:]:
             for i, d in enumerate(draw['number']):
-                freq_30[i][d] += 1
+                freq_120[i][d] += 1
         top_digits = []
-        for cnt in freq_30:
+        for cnt in freq_120:
             mc = cnt.most_common(10)
             if len(mc) < 3:
                 top_digits.append([d for d, _ in mc])
@@ -42,18 +40,18 @@ def generate_base(draws, method='frequency', recent_n=50):
                 filtered = [d for d, _ in mc if d not in (mc[0][0], mc[-1][0])]
                 top_digits.append(filtered[:8])
         recent10 = draws_slice[-10:]
-        recent_seen = [set() for _ in range(4)]
         recent_top = [Counter() for _ in range(4)]
+        recent_seen = [set() for _ in range(4)]
         for draw in recent10:
             for i, d in enumerate(draw['number']):
-                recent_seen[i].add(d)
                 recent_top[i][d] += 1
-        result = []
+                recent_seen[i].add(d)
+        gap_res = []
         for i in range(4):
             excluded = set([d for d, _ in recent_top[i].most_common(2)]) | recent_seen[i]
-            filtered = [d for d in top_digits[i] if d not in excluded]
-            result.append(filtered[:5])
-        return result
+            final = [d for d in top_digits[i] if d not in excluded]
+            gap_res.append(final[:5])
+        return gap_res
 
     if method == 'frequency':
         return freq_method(draws, recent_n)
@@ -71,16 +69,40 @@ def generate_base(draws, method='frequency', recent_n=50):
         return combined
 
     if method == 'break':
-        recent_draws = draws[-60:]
+        recent_draws = draws[-recent_n:]
         result = []
+
         for pos in range(4):
             counter = Counter()
-            for draw in recent_draws:
-                digit = f"{int(draw['number'][pos]):02d}"
+            last_seen = {str(i): -1 for i in range(10)}
+            total_slots = 0
+
+            for idx, draw in enumerate(reversed(recent_draws)):
+                digit = str(int(draw['number'][pos]))
                 counter[digit] += 1
-            ranked = sorted(counter.items(), key=lambda x: (-x[1], int(x[0])))
-            selected = [d for d, _ in ranked[5:10]]
-            result.append(selected)
+                total_slots += 1
+                if last_seen[digit] == -1:
+                    last_seen[digit] = idx
+
+            rows = []
+            for d in range(10):
+                digit = str(d)
+                freq = counter[digit] / total_slots * 100
+                skipped = last_seen[digit] if last_seen[digit] != -1 else 60
+                rows.append({
+                    "Digit": digit,
+                    "Hit Frequency (%)": freq,
+                    "Games Skipped": skipped
+                })
+
+            df = pd.DataFrame(rows)
+            df.sort_values("Hit Frequency (%)", ascending=False, inplace=True)
+            df.reset_index(drop=True, inplace=True)
+            df["Rank"] = df.index + 1
+
+            top_digits = df.iloc[5:10]["Digit"].tolist()
+            result.append(top_digits)
+
         return result
 
     if method == 'smartpattern':
