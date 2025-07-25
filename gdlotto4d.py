@@ -17,7 +17,6 @@ from wheelpick import (
 )
 from hit_frequency import show_hit_frequency_tab
 from last_hit import show_last_hit_tab
-from digit_rank import show_digit_rank_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
@@ -57,7 +56,7 @@ tabs = st.tabs([
     "Wheelpick",
     "Hit Frequency",
     "Last Hit",
-    "Digit Rank"
+    "Semak Fail"
 ])
 
 # Tab 1: Insight
@@ -166,7 +165,6 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
-    # Manual vs Auto toggle
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
 
     if input_mode == "Auto dari strategi":
@@ -224,6 +222,31 @@ with tabs[5]:
 # Tab 7: Last Hit
 with tabs[6]:
     show_last_hit_tab(draws)
-    
-with tabs[7]:  # atau index sesuai
-    show_digit_rank_tab(draws)
+
+# Tab 8: Semak Fail
+with tabs[7]:
+    st.header("📁 Semak Kandungan digit_rank.txt")
+    try:
+        df_rank = pd.read_csv("data/digit_rank.txt", sep="\t")
+        st.markdown(f"**Jumlah Baris:** {len(df_rank)}")
+        st.markdown(f"**Kolum:** `{', '.join(df_rank.columns)}`")
+
+        if "Position" not in df_rank.columns:
+            st.error("❌ Kolum `Position` tiada. Sila semak format fail.")
+        else:
+            pos_tabs = st.tabs([f"P{i}" for i in range(4)])
+            for i in range(4):
+                with pos_tabs[i]:
+                    subset = df_rank[df_rank["Position"] == i]
+                    st.subheader(f"📊 Posisi P{i}")
+                    st.dataframe(subset.reset_index(drop=True), use_container_width=True)
+                    st.markdown(f"**Jumlah Digit P{i}:** {len(subset)}")
+
+        with st.expander("📄 Lihat Fail Mentah"):
+            with open("data/digit_rank.txt", "r", encoding="utf-8") as f:
+                content = f.read()
+                st.code(content, language='text')
+                st.download_button("📥 Muat Turun digit_rank.txt", content, file_name="digit_rank.txt")
+
+    except Exception as e:
+        st.error(f"❌ Gagal baca fail: {e}")
