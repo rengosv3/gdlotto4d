@@ -6,7 +6,7 @@ import os
 def show_last_hit_tab(draws):
     st.header("📅 Last Hit Digit")
 
-    # Slider draw
+    # Slider jumlah draw
     n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 60, step=5, key="lh_draws")
 
     # Pilihan posisi
@@ -24,36 +24,46 @@ def show_last_hit_tab(draws):
 
     # Ambil draw terkini
     recent_draws = draws[-n_draws:]
+    last_hit = {}
 
-    # Simpan tarikh terakhir setiap digit muncul
-    last_hit = defaultdict(lambda: {"date": None, "index": None})
+    # Cari tarikh & skip terakhir setiap digit (0–9)
+    for d in range(10):
+        digit_str = str(d)
+        last_date = None
+        last_index = None
 
-    for idx in reversed(range(len(recent_draws))):
-        draw = recent_draws[idx]
-        number = str(draw["number"])  # pastikan string
-        for i in selected_positions:
-            digit = number[i]
-            if last_hit[digit]["date"] is None:
-                last_hit[digit]["date"] = draw["date"]
-                last_hit[digit]["index"] = idx
+        for idx in reversed(range(len(recent_draws))):
+            number = f"{int(recent_draws[idx]['number']):04d}"
+            for i in selected_positions:
+                if number[i] == digit_str:
+                    last_date = recent_draws[idx]["date"]
+                    last_index = idx
+                    break
+            if last_date:
+                break
 
-    # Susun data
+        skipped = len(recent_draws) - 1 - last_index if last_index is not None else n_draws
+        last_hit[digit_str] = {
+            "Last Date Hit": last_date if last_date else "—",
+            "Games Skipped": skipped
+        }
+
+    # Susun dataframe
     rows = []
     for d in range(10):
-        digit = str(d)
-        info = last_hit.get(digit, {"date": None, "index": None})
-        skipped = len(recent_draws) - 1 - info["index"] if info["index"] is not None else n_draws
+        digit = f"{d:02d}"
+        info = last_hit[str(d)]
         rows.append({
-            "Number": f"{d:02d}",
-            "Last Date Hit": info["date"] if info["date"] else "—",
-            "Games Skipped": skipped
+            "Number": digit,
+            "Last Date Hit": info["Last Date Hit"],
+            "Games Skipped": info["Games Skipped"]
         })
 
     df = pd.DataFrame(rows)
     df.sort_values(["Games Skipped", "Number"], ascending=[False, True], inplace=True)
     df.insert(0, "Rank", range(1, len(df) + 1))
 
-    # Papar dan simpan
+    # Papar & simpan
     st.dataframe(df, use_container_width=True)
     os.makedirs("data", exist_ok=True)
     df.to_csv("data/last_hit.txt", index=False, sep="\t")

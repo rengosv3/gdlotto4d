@@ -28,7 +28,7 @@ def get_1st_prize(date_str: str) -> str | None:
         print(f"❌ Ralat semasa request untuk {date_str}: {e}")
     return None
 
-def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 61) -> str:
+def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) -> str:
     """
     Update 'data/draws.txt' dengan draw baru sehingga semalam.
     Juga generate base_last.txt & base.txt menggunakan strategies.generate_base.
