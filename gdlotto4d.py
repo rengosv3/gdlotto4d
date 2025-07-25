@@ -56,7 +56,8 @@ tabs = st.tabs([
     "Draw List",
     "Wheelpick",
     "Hit Frequency",
-    "Last Hit"
+    "Last Hit",
+    "Digit Rank"
 ])
 
 # Tab 1: Insight
