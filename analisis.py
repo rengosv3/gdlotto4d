@@ -19,12 +19,16 @@ def show_analisis_tab(draws):
     for i in range(4):
         cols[i].markdown(f"**P{i+1}:** `{digits[i]}`")
 
+    # Pilih bilangan draw terkini untuk analisis
+    recent_n = st.slider("Jumlah draw terkini untuk analisis:", 10, len(draws), 60, 5, key="anlz_recent")
+    recent_draws = draws[-recent_n:]
+
     # Statistik
     st.markdown("---")
-    st.subheader("📊 Statistik Digit")
+    st.subheader("📊 Statistik Digit (daripada {} draw terkini)".format(recent_n))
 
-    last_hits = get_last_hit(draws)
-    freqs = get_frequency(draws)
+    last_hits = get_last_hit(recent_draws)
+    freqs = get_frequency(recent_draws)
 
     data = []
     for i, d in enumerate(digits):
@@ -48,7 +52,7 @@ def show_analisis_tab(draws):
     rows = []
     for strat in strategies:
         try:
-            base = generate_base(draws, method=strat, recent_n=30)
+            base = generate_base(recent_draws, method=strat, recent_n=30)
             flags = ["✅" if digits[i] in base[i] else "❌" for i in range(4)]
             rows.append({
                 "Strategi": strat,
