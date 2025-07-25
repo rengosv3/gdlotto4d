@@ -17,7 +17,7 @@ from wheelpick import (
 )
 from hit_frequency import show_hit_frequency_tab
 from last_hit import show_last_hit_tab
-from combined_insight import show_combined_insight_tab
+from digit_rank import show_digit_rank_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
