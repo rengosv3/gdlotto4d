@@ -81,3 +81,51 @@ def filter_wheel_combos(
 
         out.append(entry)
     return out
+
+def pick_from_base(base, index, arah="kiri"):
+    """
+    Pilih satu digit dari setiap P1–P4 pada posisi `index`,
+    dan susun mengikut `arah`:
+      - 'kiri': P1 → P2 → P3 → P4
+      - 'kanan': P4 → P3 → P2 → P1
+
+    Args:
+        base: list of 4 lists, contohnya [P1, P2, P3, P4]
+        index: integer (0-based) posisi digit yang diambil dari setiap Pi
+        arah: 'kiri' atau 'kanan'
+
+    Returns:
+        String 4-digit hasil susunan.
+    """
+    if not (0 <= index < len(base[0])):
+        raise IndexError("index di luar julat panjang base")
+
+    if arah == "kiri":
+        order = [0, 1, 2, 3]  # P1 → P4
+    elif arah == "kanan":
+        order = [3, 2, 1, 0]  # P4 → P1
+    else:
+        raise ValueError("arah mesti 'kiri' atau 'kanan'")
+
+    digits = [base[i][index] for i in order]
+    return ''.join(digits)
+
+def generate_directional_combos(base, arah="kiri", lot="0.10"):
+    """
+    Jana semua kombinasi dari setiap index dalam base,
+    ikut arah kiri→kanan atau kanan→kiri.
+
+    Args:
+        base: list of 4 lists [P1, P2, P3, P4]
+        arah: 'kiri' atau 'kanan'
+        lot: string tambahan di hujung format #####
+
+    Returns:
+        List of "<num>#####<lot>" mengikut arah dan semua index
+    """
+    length = len(base[0])
+    combos = []
+    for idx in range(length):
+        num = pick_from_base(base, idx, arah=arah)
+        combos.append(f"{num}#####{lot}")
+    return combos
