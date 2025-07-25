@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
 
 from utils import (
+    get_draw_countdown_from_last_8pm,
     load_draws,
     load_base_from_file
 )
@@ -20,18 +20,7 @@ from last_hit import show_last_hit_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
-
-# Guna masa dari browser (client time)
-client_time = st.experimental_js("new Date().toISOString()", want_return=True)
-
-if client_time:
-    now = datetime.fromisoformat(client_time.replace("Z", "+00:00")).astimezone()
-    today_8pm = now.replace(hour=20, minute=0, second=0, microsecond=0)
-    last_8pm = today_8pm - timedelta(days=1) if now < today_8pm else today_8pm
-    countdown = (last_8pm + timedelta(days=1)) - now
-    st.markdown(f"⏳ Next draw (client time) in: `{str(countdown).split('.')[0]}`")
-else:
-    st.warning("Gagal ambil masa dari browser.")
+st.markdown(f"⏳ Next draw in: `{str(get_draw_countdown_from_last_8pm()).split('.')[0]}`")
 
 # Update draws & base
 col1, col2 = st.columns(2)
@@ -175,6 +164,7 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
+    # Manual vs Auto toggle
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
 
     if input_mode == "Auto dari strategi":
