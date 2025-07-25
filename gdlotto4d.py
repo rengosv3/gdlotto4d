@@ -17,6 +17,7 @@ from wheelpick import (
 )
 from hit_frequency import show_hit_frequency_tab
 from last_hit import show_last_hit_tab
+from combined_insight import show_combined_insight_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
@@ -222,3 +223,7 @@ with tabs[5]:
 # Tab 7: Last Hit
 with tabs[6]:
     show_last_hit_tab(draws)
+    
+# Dalam `tabs[5]` atau mana-mana:
+with tabs[5]:
+    show_combined_insight_tab(draws)
