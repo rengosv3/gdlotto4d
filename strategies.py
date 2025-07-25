@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from collections import Counter, defaultdict
 from wheelpick import get_like_dislike_digits
@@ -9,7 +10,7 @@ def generate_base(draws, method='frequency', recent_n=50):
         'frequency': recent_n,
         'gap': recent_n,
         'hybrid': recent_n,
-        'break': 60,
+        'break': 0,  # sebab baca dari fail
         'smartpattern': 60,
         'hitfq': recent_n
     }
@@ -46,43 +47,6 @@ def generate_base(draws, method='frequency', recent_n=50):
 
         return result
 
-    # === BREAK ===
-    def break_method(draws_slice, n):
-        recent_draws = draws_slice[-n:]
-        result = []
-
-        for pos in range(4):
-            counter = Counter()
-            last_seen = {str(i): -1 for i in range(10)}
-            total_slots = 0
-
-            for idx, draw in enumerate(reversed(recent_draws)):
-                digit = str(int(draw['number'][pos]))
-                counter[digit] += 1
-                total_slots += 1
-                if last_seen[digit] == -1:
-                    last_seen[digit] = idx
-
-            rows = []
-            for d in range(10):
-                digit = str(d)
-                freq = counter[digit] / total_slots * 100
-                skipped = last_seen[digit] if last_seen[digit] != -1 else n
-                rows.append({
-                    "Digit": digit,
-                    "Hit Frequency (%)": freq,
-                    "Games Skipped": skipped
-                })
-
-            df = pd.DataFrame(rows)
-            df.sort_values("Hit Frequency (%)", ascending=False, inplace=True)
-            df.reset_index(drop=True, inplace=True)
-            df["Rank"] = df.index + 1
-            top_digits = df.iloc[5:10]["Digit"].tolist()
-            result.append(top_digits)
-
-        return result
-
     # === HYBRID ===
     def hybrid_method(draws_slice, n):
         f = freq_method(draws_slice, n)
@@ -93,18 +57,44 @@ def generate_base(draws, method='frequency', recent_n=50):
             combined.append([d for d, _ in cnt.most_common(5)])
         return combined
 
-    # === SMARTPATTERN ===
+    # === BREAK (from digit_rank.txt, ambil Rank 6–10) ===
+    def break_method_from_digit_rank(filepath='data/digit_rank.txt'):
+        result = [[] for _ in range(4)]
+
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"{filepath} tidak wujud")
+
+        with open(filepath, 'r') as f:
+            for line in f:
+                parts = line.strip().split(',')
+                if len(parts) != 5:
+                    continue
+                pos = int(parts[0].replace('P', '')) - 1
+                rank = int(parts[1])
+                digit = parts[2]
+                if 6 <= rank <= 10:
+                    result[pos].append(digit)
+
+        return result
+
+    # === SMARTPATTERN (gabung 4 strategi, majoriti undi) ===
     def smartpattern_method(draws_slice):
-        settings = [
-            ('break', 60),
-            ('hybrid', 45),
-            ('frequency', 50),
-            ('hybrid', 35),
+        strategies = [
+            generate_base(draws_slice, 'frequency', 50),
+            generate_base(draws_slice, 'gap', 50),
+            generate_base(draws_slice, 'hybrid', 40),
+            generate_base(draws_slice, 'hitfq', 30),
         ]
+
         result = []
-        for idx, (strat, n) in enumerate(settings):
-            base = generate_base(draws_slice, strat, n)
-            result.append(base[idx])
+        for pos in range(4):
+            votes = Counter()
+            for strat in strategies:
+                for digit in strat[pos]:
+                    votes[digit] += 1
+            top5 = [d for d, _ in votes.most_common(5)]
+            result.append(top5)
+
         return result
 
     # === HIT FREQUENCY ===
@@ -120,7 +110,7 @@ def generate_base(draws, method='frequency', recent_n=50):
             base.append([d for d, _ in ranked[:5]])
         return base
 
-    # === MAIN STRATEGY SWITCH ===
+    # === STRATEGY DISPATCH ===
     if method == 'frequency':
         return freq_method(draws, recent_n)
     elif method == 'gap':
@@ -128,7 +118,7 @@ def generate_base(draws, method='frequency', recent_n=50):
     elif method == 'hybrid':
         return hybrid_method(draws, recent_n)
     elif method == 'break':
-        return break_method(draws, 60)
+        return break_method_from_digit_rank()
     elif method == 'smartpattern':
         return smartpattern_method(draws)
     elif method == 'hitfq':
