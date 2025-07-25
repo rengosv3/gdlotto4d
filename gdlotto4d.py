@@ -22,7 +22,7 @@ st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
 st.markdown(f"⏳ Next draw in: `{str(get_draw_countdown_from_last_8pm()).split('.')[0]}`")
 
-# --- Update button & register link
+# Update draws & base
 col1, col2 = st.columns(2)
 with col1:
     if st.button("📥 Update Draw Terkini"):
@@ -31,7 +31,6 @@ with col1:
         st.markdown("### 📋 Base Hari Ini")
         base_txt = load_base_from_file()
         st.code('\n'.join([' '.join(p) for p in base_txt]) or "Tiada base.", language='text')
-
 with col2:
     st.markdown("""
     <a href="https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845" target="_blank">
@@ -41,7 +40,7 @@ with col2:
     </a>
     """, unsafe_allow_html=True)
 
-# --- Load draws
+# Load draws
 draws = load_draws()
 if not draws:
     st.warning("⚠️ Sila klik 'Update Draw Terkini' untuk mula.")
@@ -50,11 +49,17 @@ if not draws:
 st.info(f"📅 Tarikh terakhir: **{draws[-1]['date']}** | 📊 Jumlah draw: **{len(draws)}**")
 
 tabs = st.tabs([
-    "Insight", "Ramalan", "Backtest", "Draw List",
-    "Wheelpick", "Hit Frequency", "Last Hit"
+    "Insight",
+    "Ramalan",
+    "Backtest",
+    "Draw List",
+    "Wheelpick",
+    "Hit Frequency",
+    "Last Hit",
+    "Semak Fail"
 ])
 
-# --- Tab 1: Insight
+# Tab 1: Insight
 with tabs[0]:
     st.header("📌 Insight Terakhir")
     last = draws[-1]
@@ -104,7 +109,7 @@ with tabs[0]:
         else:
             st.warning("❗ Tidak cukup data untuk perbandingan.")
 
-# --- Tab 2: Ramalan
+# Tab 2: Ramalan
 with tabs[1]:
     st.header("🧠 Ramalan Base")
     strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
@@ -121,7 +126,7 @@ with tabs[1]:
     except Exception as e:
         st.error(str(e))
 
-# --- Tab 3: Backtest
+# Tab 3: Backtest
 with tabs[2]:
     st.header("🔁 Backtest Base")
     arah_bt = st.radio("Arah:", ["Kiri→Kanan", "Kanan→Kiri"], key="bt_dir")
@@ -144,12 +149,12 @@ with tabs[2]:
         except Exception as e:
             st.error(str(e))
 
-# --- Tab 4: Draw List
+# Tab 4: Draw List
 with tabs[3]:
     st.header("📋 Senarai Draw")
     st.dataframe(pd.DataFrame(draws), use_container_width=True)
 
-# --- Tab 5: Wheelpick
+# Tab 5: Wheelpick
 with tabs[4]:
     st.header("🎡 Wheelpick Generator")
     arah_wp = st.radio("Arah:", ["Kiri→Kanan", "Kanan→Kiri"], key="wp_dir")
@@ -161,6 +166,7 @@ with tabs[4]:
     dislikes = user_dislike.split()
 
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
+
     if input_mode == "Auto dari strategi":
         strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
         strat_wp = st.selectbox("Strategi Base:", strategies, key="wp_strat")
@@ -181,6 +187,7 @@ with tabs[4]:
             st.stop()
 
     lot = st.text_input("Nilai Lot:", value="0.10", key="wp_lot")
+
     with st.expander("⚙️ Tapisan Tambahan"):
         no_repeat = st.checkbox("Buang digit ulang", key="f1")
         no_triple = st.checkbox("Buang triple", key="f2")
@@ -208,10 +215,21 @@ with tabs[4]:
         st.download_button("💾 Muat Turun", data=data,
                            file_name="wheelpick.txt", mime="text/plain")
 
-# --- Tab 6: Hit Frequency
+# Tab 6: Hit Frequency
 with tabs[5]:
     show_hit_frequency_tab(draws)
 
-# --- Tab 7: Last Hit
+# Tab 7: Last Hit
 with tabs[6]:
     show_last_hit_tab(draws)
+
+# Tab 8: Semak Fail
+with tabs[7]:
+    st.header("📁 Semak Kandungan draws.txt")
+    try:
+        with open("data/draws.txt", "r", encoding="utf-8") as f:
+            content = f.read()
+            st.code(content, language='text')
+            st.download_button("📥 Muat Turun draws.txt", content, file_name="draws.txt")
+    except FileNotFoundError:
+        st.error("❌ `data/draws.txt` tidak wujud.")
