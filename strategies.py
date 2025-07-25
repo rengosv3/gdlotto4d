@@ -7,7 +7,7 @@ def generate_base(draws, method='frequency', recent_n=50):
 
     requirements = {
         'frequency': recent_n,
-        'gap': 30,
+        'gap': recent_n,
         'hybrid': recent_n,
         'break': 60,
         'smartpattern': 60,
@@ -19,6 +19,7 @@ def generate_base(draws, method='frequency', recent_n=50):
     if total < requirements[method]:
         raise ValueError(f"Not enough draws for '{method}' (need {requirements[method]}, have {total})")
 
+    # === FREQUENCY ===
     def freq_method(draws_slice, n):
         counters = [Counter() for _ in range(4)]
         for d in draws_slice[-n:]:
@@ -26,50 +27,28 @@ def generate_base(draws, method='frequency', recent_n=50):
                 counters[i][digit] += 1
         return [[d for d, _ in c.most_common(5)] for c in counters]
 
-    def gap_method(draws_slice):
-        freq_120 = [Counter() for _ in range(4)]
-        for draw in draws_slice[-30:]:
-            for i, d in enumerate(draw['number']):
-                freq_120[i][d] += 1
-        top_digits = []
-        for cnt in freq_120:
-            mc = cnt.most_common(10)
-            if len(mc) < 3:
-                top_digits.append([d for d, _ in mc])
-            else:
-                filtered = [d for d, _ in mc if d not in (mc[0][0], mc[-1][0])]
-                top_digits.append(filtered[:8])
-        recent10 = draws_slice[-10:]
-        recent_top = [Counter() for _ in range(4)]
-        recent_seen = [set() for _ in range(4)]
-        for draw in recent10:
-            for i, d in enumerate(draw['number']):
-                recent_top[i][d] += 1
-                recent_seen[i].add(d)
-        gap_res = []
-        for i in range(4):
-            excluded = set([d for d, _ in recent_top[i].most_common(2)]) | recent_seen[i]
-            final = [d for d in top_digits[i] if d not in excluded]
-            gap_res.append(final[:5])
-        return gap_res
+    # === GAP ===
+    def gap_method(draws_slice, n):
+        draws_used = draws_slice[-n:]
+        last_seen = [defaultdict(lambda: -1) for _ in range(4)]
 
-    if method == 'frequency':
-        return freq_method(draws, recent_n)
+        for idx, draw in enumerate(reversed(draws_used)):
+            for pos, digit in enumerate(draw['number']):
+                if last_seen[pos][digit] == -1:
+                    last_seen[pos][digit] = idx
 
-    if method == 'gap':
-        return gap_method(draws)
+        result = []
+        for pos in range(4):
+            gap_list = [(str(d), last_seen[pos][str(d)]) for d in range(10)]
+            gap_sorted = sorted(gap_list, key=lambda x: -x[1])
+            top5 = [d for d, _ in gap_sorted[:5]]
+            result.append(top5)
 
-    if method == 'hybrid':
-        f = freq_method(draws, recent_n)
-        g = gap_method(draws)
-        combined = []
-        for f_list, g_list in zip(f, g):
-            cnt = Counter(f_list + g_list)
-            combined.append([d for d, _ in cnt.most_common(5)])
-        return combined
+        return result
 
-    if method == 'break':
-        recent_draws = draws[-recent_n:]
+    # === BREAK ===
+    def break_method(draws_slice, n):
+        recent_draws = draws_slice[-n:]
         result = []
 
         for pos in range(4):
@@ -88,7 +67,7 @@ def generate_base(draws, method='frequency', recent_n=50):
             for d in range(10):
                 digit = str(d)
                 freq = counter[digit] / total_slots * 100
-                skipped = last_seen[digit] if last_seen[digit] != -1 else 60
+                skipped = last_seen[digit] if last_seen[digit] != -1 else n
                 rows.append({
                     "Digit": digit,
                     "Hit Frequency (%)": freq,
@@ -99,13 +78,23 @@ def generate_base(draws, method='frequency', recent_n=50):
             df.sort_values("Hit Frequency (%)", ascending=False, inplace=True)
             df.reset_index(drop=True, inplace=True)
             df["Rank"] = df.index + 1
-
             top_digits = df.iloc[5:10]["Digit"].tolist()
             result.append(top_digits)
 
         return result
 
-    if method == 'smartpattern':
+    # === HYBRID ===
+    def hybrid_method(draws_slice, n):
+        f = freq_method(draws_slice, n)
+        g = gap_method(draws_slice, n)
+        combined = []
+        for f_list, g_list in zip(f, g):
+            cnt = Counter(f_list + g_list)
+            combined.append([d for d, _ in cnt.most_common(5)])
+        return combined
+
+    # === SMARTPATTERN ===
+    def smartpattern_method(draws_slice):
         settings = [
             ('break', 60),
             ('hybrid', 45),
@@ -114,12 +103,13 @@ def generate_base(draws, method='frequency', recent_n=50):
         ]
         result = []
         for idx, (strat, n) in enumerate(settings):
-            base = generate_base(draws, strat, n)
+            base = generate_base(draws_slice, strat, n)
             result.append(base[idx])
         return result
 
-    if method == 'hitfq':
-        recent_draws = draws[-recent_n:]
+    # === HIT FREQUENCY ===
+    def hitfq_method(draws_slice, n):
+        recent_draws = draws_slice[-n:]
         counters = [Counter() for _ in range(4)]
         for draw in recent_draws:
             for i, digit in enumerate(draw['number']):
@@ -129,3 +119,19 @@ def generate_base(draws, method='frequency', recent_n=50):
             ranked = sorted(c.items(), key=lambda x: (-x[1], int(x[0])))
             base.append([d for d, _ in ranked[:5]])
         return base
+
+    # === MAIN STRATEGY SWITCH ===
+    if method == 'frequency':
+        return freq_method(draws, recent_n)
+    elif method == 'gap':
+        return gap_method(draws, recent_n)
+    elif method == 'hybrid':
+        return hybrid_method(draws, recent_n)
+    elif method == 'break':
+        return break_method(draws, 60)
+    elif method == 'smartpattern':
+        return smartpattern_method(draws)
+    elif method == 'hitfq':
+        return hitfq_method(draws, recent_n)
+    else:
+        raise ValueError(f"Unsupported method '{method}'")
