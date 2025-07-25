@@ -197,7 +197,8 @@ with tabs[4]:
         sim_limit = st.slider("Max sama dgn last draw:", 0, 4, 2, key="f6")
 
     if st.button("🎰 Create Wheelpick", key="wp_run"):
-        combos = generate_wheel_combos(base_wp, lot=lot)
+        arah = "kiri" if arah_wp == "Kiri→Kanan" else "kanan"
+        combos = generate_wheel_combos(base_wp, lot=lot, arah=arah)
         st.info(f"Sebelum tapis: {len(combos)}")
         filtered = filter_wheel_combos(
             combos, draws,
