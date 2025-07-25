@@ -1,6 +1,9 @@
 # strategies.py
+
 import itertools
 from collections import Counter
+import pandas as pd
+from wheelpick import get_like_dislike_digits
 
 def generate_base(draws, method='frequency', recent_n=50):
     """
@@ -76,20 +79,25 @@ def generate_base(draws, method='frequency', recent_n=50):
         return combined
 
     if method == 'qaisara':
-        f = freq_method(draws, recent_n)
-        g = gap_method(draws)
-        h = generate_base(draws, 'hybrid', recent_n)
-        final = []
+        # Versi baharu: berdasarkan digit_rank + like/dislike
+        df = pd.read_csv("data/digit_rank.txt", sep="\t")
+        df = df[(df["Hit Frequency (%)"] >= 5) & (df["Games Skipped"] <= 20)]
+
+        # Ambil top-4 setiap posisi
+        base = []
         for pos in range(4):
-            score = Counter()
-            score.update(f[pos])
-            score.update(g[pos])
-            score.update(h[pos])
-            ranked = score.most_common()
-            if len(ranked) > 2:
-                ranked = ranked[1:-1]  # drop top & bottom
-            final.append([d for d,_ in ranked[:5]])
-        return final
+            group = df[df.Position == pos]["Digit"].astype(str).tolist()[:4]
+            base.append(group)
+
+        # Tapis ikut like/dislike dari draw terkini
+        like, dislike = get_like_dislike_digits(draws, recent_n=60)
+        for i in range(4):
+            base[i] = [d for d in base[i] if d in like and d not in dislike]
+            if not base[i]:
+                fallback = df[df.Position == i]["Digit"].astype(str).tolist()[:2]
+                base[i] = fallback
+
+        return base
 
     if method == 'smartpattern':
         settings = [
