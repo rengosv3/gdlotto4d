@@ -28,7 +28,7 @@ def get_1st_prize(date_str: str) -> str | None:
         print(f"❌ Ralat semasa request untuk {date_str}: {e}")
     return None
 
-def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 31) -> str:
+def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) -> str:
     """
     Update 'data/draws.txt' dengan draw baru sehingga result terakhir yang mungkin keluar.
     Hanya ambil draw hari ini jika jam sekarang >= 8 malam waktu Malaysia.
