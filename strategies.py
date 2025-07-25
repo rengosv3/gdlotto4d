@@ -6,28 +6,22 @@ import pandas as pd
 from wheelpick import get_like_dislike_digits
 
 def generate_base(draws, method='frequency', recent_n=50):
-    """
-    Returns a list of 4 lists (one per digit position), each containing top-5 candidate digits.
-    methods: 'frequency','gap','hybrid','qaisara','smartpattern','hitfq'
-    recent_n: number of latest draws to consider (where applicable)
-    Raises ValueError on insufficient data or unknown method.
-    """
     total = len(draws)
-    # Minimum requirements
+
     requirements = {
         'frequency': recent_n,
         'gap': 120,
         'hybrid': recent_n,
-        'qaisara': 60,
+        'break': 60,           # ⬅️ ubah nama dari qaisara ke break
         'smartpattern': 60,
         'hitfq': recent_n
     }
+
     if method not in requirements:
         raise ValueError(f"Unknown strategy '{method}'")
     if total < requirements[method]:
         raise ValueError(f"Not enough draws for '{method}' (need {requirements[method]}, have {total})")
 
-    # ---------- Helper methods ----------
     def freq_method(draws_slice, n):
         counters = [Counter() for _ in range(4)]
         for d in draws_slice[-n:]:
@@ -62,7 +56,6 @@ def generate_base(draws, method='frequency', recent_n=50):
             gap_res.append(final[:5])
         return gap_res
 
-    # ---------- Strategies ----------
     if method == 'frequency':
         return freq_method(draws, recent_n)
 
@@ -78,33 +71,42 @@ def generate_base(draws, method='frequency', recent_n=50):
             combined.append([d for d,_ in cnt.most_common(5)])
         return combined
 
-    if method == 'qaisara':
-        # Versi baharu: berdasarkan digit_rank + like/dislike
+    if method == 'break':  # ⬅️ Nama baru strategi
         df = pd.read_csv("data/digit_rank.txt", sep="\t")
-        df = df[(df["Hit Frequency (%)"] >= 5) & (df["Games Skipped"] <= 20)]
+        df["Digit"] = df["Digit"].astype(str)
+        df["Position"] = df.index % 4  # Anggap 4 posisi berulang
 
-        # Ambil top-4 setiap posisi
         base = []
         for pos in range(4):
-            group = df[df.Position == pos]["Digit"].astype(str).tolist()[:4]
-            base.append(group)
+            group = df[df["Position"] == pos]["Digit"].tolist()
+            group_6_10 = group[5:10]  # Rank 6–10
+            base.append(group_6_10)
 
-        # Tapis ikut like/dislike dari draw terkini
         like, dislike = get_like_dislike_digits(draws, recent_n=60)
+
         for i in range(4):
             base[i] = [d for d in base[i] if d in like and d not in dislike]
+
             if not base[i]:
-                fallback = df[df.Position == i]["Digit"].astype(str).tolist()[:2]
-                base[i] = fallback
+                fallback = df[df["Position"] == i]["Digit"].tolist()[5:15]
+                base[i] = [d for d in fallback if d not in dislike][:5]
+
+            if len(base[i]) < 5:
+                extra = df[df["Position"] == i]["Digit"].tolist()[5:15]
+                for d in extra:
+                    if d not in base[i] and d not in dislike:
+                        base[i].append(d)
+                    if len(base[i]) == 5:
+                        break
 
         return base
 
     if method == 'smartpattern':
         settings = [
-            ('qaisara', 60),   # for P1
-            ('hybrid', 45),    # for P2
-            ('frequency', 50), # for P3
-            ('hybrid', 35),    # for P4
+            ('break', 60),        # ⬅️ guna 'break'
+            ('hybrid', 45),
+            ('frequency', 50),
+            ('hybrid', 35),
         ]
         result = []
         for idx, (strat, n) in enumerate(settings):

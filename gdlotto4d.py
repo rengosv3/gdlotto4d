@@ -86,7 +86,7 @@ with tabs[0]:
         arah = st.radio("Arah Digit:", ["Kiri→Kanan", "Kanan→Kiri"], key="insight_dir")
         recent_n = st.slider("Draw untuk base:", 10, len(draws), 50, 5, key="insight_n")
 
-        strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
+        strategies = ['frequency', 'gap', 'hybrid', 'break', 'smartpattern', 'hitfq']
         rows = []
         for strat in strategies:
             try:
@@ -111,7 +111,7 @@ with tabs[0]:
 # Tab 2: Ramalan
 with tabs[1]:
     st.header("🧠 Ramalan Base")
-    strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
+    strategies = ['frequency', 'gap', 'hybrid', 'break', 'smartpattern', 'hitfq']
     strat = st.selectbox("Strategi:", strategies, key="pred_strat")
     recent_n2 = st.slider("Draw terkini:", 5, len(draws), 30, 5, key="pred_n")
 
@@ -129,7 +129,7 @@ with tabs[1]:
 with tabs[2]:
     st.header("🔁 Backtest Base")
     arah_bt = st.radio("Arah:", ["Kiri→Kanan", "Kanan→Kiri"], key="bt_dir")
-    strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
+    strategies = ['frequency', 'gap', 'hybrid', 'break', 'smartpattern', 'hitfq']
     strat_bt = st.selectbox("Strategi:", strategies, key="bt_strat")
     n_bt = st.slider("Draw untuk base:", 5, len(draws), 30, 5, key="bt_n")
     rounds = st.slider("Bilangan backtest:", 5, 50, 10, key="bt_rounds")
@@ -167,7 +167,7 @@ with tabs[4]:
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
 
     if input_mode == "Auto dari strategi":
-        strategies = ['frequency', 'gap', 'hybrid', 'qaisara', 'smartpattern', 'hitfq']
+        strategies = ['frequency', 'gap', 'hybrid', 'break', 'smartpattern', 'hitfq']
         strat_wp = st.selectbox("Strategi Base:", strategies, key="wp_strat")
         recent_wp = st.slider("Draw untuk base:", 5, len(draws), 30, 5, key="wp_n")
         try:
