@@ -229,11 +229,11 @@ with tabs[7]:
     show_digit_rank_tab(draws)
     
 # Tab 10: Analisis 
-with tabs[9]:
+with tabs[8]:
     show_analisis_tab(draws)
 
 # Tab 9: Semak Fail
-with tabs[8]:
+with tabs[9]:
     st.header("📁 Semak Fail Simpanan")
     files = [
         "data/digit_rank.txt",
