@@ -225,6 +225,5 @@ with tabs[5]:
 with tabs[6]:
     show_last_hit_tab(draws)
     
-# Tab 8: Sigit Rank
-with tabs[7]:
-    show_combined_insight_tab(draws)
+with tabs[7]:  # atau index sesuai
+    show_digit_rank_tab(draws)
