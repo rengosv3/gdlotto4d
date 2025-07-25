@@ -9,7 +9,7 @@ def generate_base(draws, method='frequency', recent_n=50):
 
     requirements = {
         'frequency': recent_n,
-        'gap': 120,
+        'gap': 30,
         'hybrid': recent_n,
         'break': 60,
         'smartpattern': 60,
@@ -30,7 +30,7 @@ def generate_base(draws, method='frequency', recent_n=50):
 
     def gap_method(draws_slice):
         freq_120 = [Counter() for _ in range(4)]
-        for draw in draws_slice[-120:]:
+        for draw in draws_slice[-30:]:
             for i, d in enumerate(draw['number']):
                 freq_120[i][d] += 1
         top_digits = []
@@ -80,9 +80,10 @@ def generate_base(draws, method='frequency', recent_n=50):
 
         for idx, draw in enumerate(reversed(recent_draws)):
             for d in draw['number']:
-                count[d] += 1
-                if last_seen[d] == -1:
-                    last_seen[d] = idx
+                  d = f"{int(d):02d}"
+                  count[d] += 1
+                  if last_seen[d] == -1:
+                      last_seen[d] = idx
 
         digit_rank_df = pd.DataFrame(all_digits, columns=["Digit"])
         digit_rank_df["Hit Count"] = digit_rank_df["Digit"].map(count).fillna(0).astype(int)
