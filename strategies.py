@@ -1,5 +1,3 @@
-# strategies.py
-
 import pandas as pd
 from collections import Counter, defaultdict
 from wheelpick import get_like_dislike_digits
@@ -71,34 +69,33 @@ def generate_base(draws, method='frequency', recent_n=50):
         return combined
 
     if method == 'break':
-        # Create digit_rank directly from draws (no digit_rank.txt needed)
-        all_digits = [f"{i:02d}" for i in range(100)]
         recent_draws = draws[-60:]
-        
-        count = defaultdict(int)
-        last_seen = {d: -1 for d in all_digits}
+        all_digits = [f"{i:02d}" for i in range(100)]
+        results = []
 
-        for idx, draw in enumerate(reversed(recent_draws)):
-            for d in draw['number']:
-                  d = f"{int(d):02d}"
-                  count[d] += 1
-                  if last_seen[d] == -1:
-                      last_seen[d] = idx
+        for pos in range(4):
+            count = defaultdict(int)
+            last_seen = {d: -1 for d in all_digits}
 
-        digit_rank_df = pd.DataFrame(all_digits, columns=["Digit"])
-        digit_rank_df["Hit Count"] = digit_rank_df["Digit"].map(count).fillna(0).astype(int)
-        digit_rank_df["Hit Frequency (%)"] = digit_rank_df["Hit Count"] / 60 * 100
-        digit_rank_df["Games Skipped"] = digit_rank_df["Digit"].map(lambda d: last_seen[d] if last_seen[d] != -1 else 60)
+            for idx, draw in enumerate(reversed(recent_draws)):
+                d = f"{int(draw['number'][pos]):02d}"
+                count[d] += 1
+                if last_seen[d] == -1:
+                    last_seen[d] = idx
 
-        digit_rank_df = digit_rank_df.sort_values(by="Hit Frequency (%)", ascending=False).reset_index(drop=True)
-        digit_rank_df.index += 1
-        digit_rank_df.insert(0, "Rank", digit_rank_df.index)
+            digit_rank_df = pd.DataFrame(all_digits, columns=["Digit"])
+            digit_rank_df["Hit Count"] = digit_rank_df["Digit"].map(count).fillna(0).astype(int)
+            digit_rank_df["Hit Frequency (%)"] = digit_rank_df["Hit Count"] / 60 * 100
+            digit_rank_df["Games Skipped"] = digit_rank_df["Digit"].map(lambda d: last_seen[d] if last_seen[d] != -1 else 60)
 
-        # Ambil Rank 6–10 sahaja
-        top_digits = digit_rank_df.iloc[5:10]["Digit"].tolist()
+            digit_rank_df = digit_rank_df.sort_values(by="Hit Frequency (%)", ascending=False).reset_index(drop=True)
+            digit_rank_df.index += 1
+            digit_rank_df.insert(0, "Rank", digit_rank_df.index)
 
-        # Guna sama untuk keempat-empat posisi
-        return [top_digits.copy() for _ in range(4)]
+            top_digits = digit_rank_df.iloc[5:10]["Digit"].tolist()
+            results.append(top_digits)
+
+        return results
 
     if method == 'smartpattern':
         settings = [
