@@ -17,6 +17,7 @@ from wheelpick import (
 )
 from hit_frequency import show_hit_frequency_tab
 from last_hit import show_last_hit_tab
+from digit_rank import show_digit_rank_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
@@ -56,7 +57,7 @@ tabs = st.tabs([
     "Wheelpick",
     "Hit Frequency",
     "Last Hit",
-    "Semak Fail"
+    "Digit Rank"
 ])
 
 # Tab 1: Insight
@@ -165,6 +166,7 @@ with tabs[4]:
     likes = user_like.split()
     dislikes = user_dislike.split()
 
+    # Manual vs Auto toggle
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
 
     if input_mode == "Auto dari strategi":
@@ -222,14 +224,6 @@ with tabs[5]:
 # Tab 7: Last Hit
 with tabs[6]:
     show_last_hit_tab(draws)
-
-# Tab 8: Semak Fail
-with tabs[7]:
-    st.header("📁 Semak Kandungan draws.txt")
-    try:
-        with open("data/digit_rank.txt", "r", encoding="utf-8") as f:
-            content = f.read()
-            st.code(content, language='text')
-            st.download_button("📥 Muat Turun draws.txt", content, file_name="draws.txt")
-    except FileNotFoundError:
-        st.error("❌ `data/draws.txt` tidak wujud.")
+    
+with tabs[7]:  # atau index sesuai
+    show_digit_rank_tab(draws)
