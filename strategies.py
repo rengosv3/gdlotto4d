@@ -3,16 +3,15 @@
 import itertools
 from collections import Counter
 import pandas as pd
-from wheelpick import get_like_dislike_digits
 
 def generate_base(draws, method='frequency', recent_n=50):
     total = len(draws)
 
     requirements = {
         'frequency': recent_n,
-        'gap': 120,
+        'gap': 30,
         'hybrid': recent_n,
-        'break': 60,           # ⬅️ ubah nama dari qaisara ke break
+        'break': 60,
         'smartpattern': 60,
         'hitfq': recent_n
     }
@@ -31,7 +30,7 @@ def generate_base(draws, method='frequency', recent_n=50):
 
     def gap_method(draws_slice):
         freq_120 = [Counter() for _ in range(4)]
-        for draw in draws_slice[-120:]:
+        for draw in draws_slice[-30:]:
             for i, d in enumerate(draw['number']):
                 freq_120[i][d] += 1
         top_digits = []
@@ -71,39 +70,23 @@ def generate_base(draws, method='frequency', recent_n=50):
             combined.append([d for d,_ in cnt.most_common(5)])
         return combined
 
-    if method == 'break':  # ⬅️ Nama baru strategi
+    if method == 'break':
         df = pd.read_csv("data/digit_rank.txt", sep="\t")
         df["Digit"] = df["Digit"].astype(str)
-        df["Position"] = df.index % 4  # Anggap 4 posisi berulang
+        df["Position"] = df.index % 4  # Posisi 0–3 berulang setiap 10 baris
 
         base = []
         for pos in range(4):
             group = df[df["Position"] == pos]["Digit"].tolist()
-            group_6_10 = group[5:10]  # Rank 6–10
+            group_6_10 = group[5:10]  # Ambil Rank 6–10
+            if not group_6_10:
+                group_6_10 = group[:5]  # fallback
             base.append(group_6_10)
-
-        like, dislike = get_like_dislike_digits(draws, recent_n=60)
-
-        for i in range(4):
-            base[i] = [d for d in base[i] if d in like and d not in dislike]
-
-            if not base[i]:
-                fallback = df[df["Position"] == i]["Digit"].tolist()[5:15]
-                base[i] = [d for d in fallback if d not in dislike][:5]
-
-            if len(base[i]) < 5:
-                extra = df[df["Position"] == i]["Digit"].tolist()[5:15]
-                for d in extra:
-                    if d not in base[i] and d not in dislike:
-                        base[i].append(d)
-                    if len(base[i]) == 5:
-                        break
-
         return base
 
     if method == 'smartpattern':
         settings = [
-            ('break', 60),        # ⬅️ guna 'break'
+            ('break', 60),
             ('hybrid', 45),
             ('frequency', 50),
             ('hybrid', 35),
