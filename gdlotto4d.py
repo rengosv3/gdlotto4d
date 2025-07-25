@@ -18,6 +18,7 @@ from wheelpick import (
 from hit_frequency import show_hit_frequency_tab
 from last_hit import show_last_hit_tab
 from digit_rank import show_digit_rank_tab
+from analisis import show_analisis_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
@@ -58,6 +59,7 @@ tabs = st.tabs([
     "Hit Frequency",
     "Last Hit",
     "Digit Rank",
+    "Analisis",
     "Semak Fail"
 ])
 
@@ -225,6 +227,10 @@ with tabs[6]:
 # Tab 8: Digit Rank
 with tabs[7]:
     show_digit_rank_tab(draws)
+    
+# Tab 10: Analisis 
+with tabs[9]:
+    show_analisis_tab(draws)
 
 # Tab 9: Semak Fail
 with tabs[8]:
