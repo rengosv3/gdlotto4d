@@ -1,5 +1,3 @@
-# last_hit.py
-
 import streamlit as st
 import pandas as pd
 from collections import defaultdict
@@ -27,14 +25,15 @@ def show_last_hit_tab(draws):
     # Cari tarikh terakhir digit muncul
     for idx in reversed(range(len(recent_draws))):
         draw = recent_draws[idx]
+        number = draw["number"]
         for i in selected_positions:
-            digit = draw["number"][i]
+            digit = number[i]
             if last_hit_map[digit]["date"] is None:
                 last_hit_map[digit]["date"] = draw["date"]
                 last_hit_map[digit]["index"] = idx
 
     # Sediakan dataframe
-    all_digits = [f"{i:02d}" for i in range(10)]
+    all_digits = [str(i) for i in range(10)]  # Gunakan '0' hingga '9'
     rows = []
     for digit in all_digits:
         info = last_hit_map.get(digit, {"date": None, "index": None})
@@ -47,6 +46,7 @@ def show_last_hit_tab(draws):
         })
 
     df = pd.DataFrame(rows)
+    df["Number"] = df["Number"].apply(lambda x: f"{int(x):02d}")  # Format jadi dua digit
     df.sort_values(["Games Skipped", "Number"], ascending=[False, True], inplace=True)
     df.insert(0, "Rank", range(1, len(df)+1))
     st.dataframe(df, use_container_width=True)
