@@ -17,6 +17,7 @@ from wheelpick import (
 )
 from hit_frequency import show_hit_frequency_tab
 from last_hit import show_last_hit_tab
+from digit_rank import show_digit_rank_tab
 
 st.set_page_config(page_title="Breakcode4D Predictor", layout="wide")
 st.title("🔮 Breakcode4D Predictor (GD Lotto) V2.0")
@@ -56,6 +57,7 @@ tabs = st.tabs([
     "Wheelpick",
     "Hit Frequency",
     "Last Hit",
+    "Digit Rank",
     "Semak Fail"
 ])
 
@@ -89,10 +91,7 @@ with tabs[0]:
         for strat in strategies:
             try:
                 base = generate_base(draws[:-1], method=strat, recent_n=recent_n)
-                if arah == "Kanan→Kiri":
-                    fp = last['number'][::-1]
-                else:
-                    fp = last['number']
+                fp = last['number'][::-1] if arah == "Kanan→Kiri" else last['number']
                 flags = ["✅" if fp[i] in base[i] else "❌" for i in range(4)]
                 rows.append({
                     "Strategi": strat,
@@ -223,30 +222,24 @@ with tabs[5]:
 with tabs[6]:
     show_last_hit_tab(draws)
 
-# Tab 8: Semak Fail
+# Tab 8: Digit Rank
 with tabs[7]:
-    st.header("📁 Semak Kandungan digit_rank.txt")
-    try:
-        df_rank = pd.read_csv("data/digit_rank.txt", sep="\t")
-        st.markdown(f"**Jumlah Baris:** {len(df_rank)}")
-        st.markdown(f"**Kolum:** `{', '.join(df_rank.columns)}`")
+    show_digit_rank_tab(draws)
 
-        if "Position" not in df_rank.columns:
-            st.error("❌ Kolum `Position` tiada. Sila semak format fail.")
-        else:
-            pos_tabs = st.tabs([f"P{i}" for i in range(4)])
-            for i in range(4):
-                with pos_tabs[i]:
-                    subset = df_rank[df_rank["Position"] == i]
-                    st.subheader(f"📊 Posisi P{i}")
-                    st.dataframe(subset.reset_index(drop=True), use_container_width=True)
-                    st.markdown(f"**Jumlah Digit P{i}:** {len(subset)}")
+# Tab 9: Semak Fail
+with tabs[8]:
+    st.header("📁 Semak Fail Simpanan")
+    files = [
+        "data/digit_rank.txt",
+        "data/base_last.txt",
+        "data/draws.txt"
+    ]
 
-        with st.expander("📄 Lihat Fail Mentah"):
-            with open("data/digit_rank.txt", "r", encoding="utf-8") as f:
-                content = f.read()
-                st.code(content, language='text')
-                st.download_button("📥 Muat Turun digit_rank.txt", content, file_name="digit_rank.txt")
-
-    except Exception as e:
-        st.error(f"❌ Gagal baca fail: {e}")
+    for f in files:
+        st.subheader(f"📄 {f}")
+        try:
+            with open(f) as fp:
+                content = fp.read()
+                st.code(content, language="text")
+        except Exception as e:
+            st.error(f"❌ Gagal baca fail: {str(e)}")
