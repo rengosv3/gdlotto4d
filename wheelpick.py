@@ -1,4 +1,5 @@
 # wheelpick.py
+
 import itertools
 from collections import Counter
 
@@ -7,19 +8,26 @@ def get_like_dislike_digits(draws, recent_n=30):
     Dari `draws` (list of {'date','number'}) ambil top-3 paling kerap (like)
     dan bottom-3 paling jarang (dislike) dari `recent_n` terakhir.
     """
-    recent = [d['number'] for d in draws[-recent_n:] if 'number' in d and len(d['number'])==4]
+    recent = [d['number'] for d in draws[-recent_n:] if 'number' in d and len(d['number']) == 4]
     cnt = Counter()
     for num in recent:
         cnt.update(num)
-    most = [d for d,_ in cnt.most_common(3)]
-    least = [d for d,_ in cnt.most_common()[-3:]] if len(cnt) >= 3 else []
+    most = [d for d, _ in cnt.most_common(3)]
+    least = [d for d, _ in cnt.most_common()[-3:]] if len(cnt) >= 3 else []
     return most, least
 
-def generate_wheel_combos(base, lot="0.10"):
+def generate_wheel_combos(base, lot="0.10", arah="kiri"):
     """
     Dari `base` (list of 4 lists), hasilkan semua kombinasi
-    dalam format "<num>#####<lot>".
+    dalam format "<num>#####<lot>" ikut arah:
+      - 'kiri': P1 → P4
+      - 'kanan': P4 → P1
     """
+    if arah == "kanan":
+        base = list(reversed(base))
+    elif arah != "kiri":
+        raise ValueError("arah mesti 'kiri' atau 'kanan'")
+
     combos = []
     for digits in itertools.product(*base):
         num = ''.join(digits)
@@ -53,29 +61,21 @@ def filter_wheel_combos(
         num, _ = entry.split("#####")
         digs = list(num)
 
-        # 1) Tiada digit berulang
         if no_repeat and len(set(digs)) < 4:
             continue
-        # 2) Tiada triple
         if no_triple and any(digs.count(d) >= 3 for d in set(digs)):
             continue
-        # 3) Tiada pair
         if no_pair and any(digs.count(d) == 2 for d in set(digs)):
             continue
-        # 4) Elak kombinasi menaik penuh
-        if no_ascend and num in ["0123","1234","2345","3456","4567","5678","6789"]:
+        if no_ascend and num in ["0123", "1234", "2345", "3456", "4567", "5678", "6789"]:
             continue
-        # 5) Elak yang pernah keluar
         if use_history and num in past:
             continue
-        # 6) Batas similarity dgn last draw
-        sim = sum(1 for a,b in zip(num, last) if a==b)
+        sim = sum(1 for a, b in zip(num, last) if a == b)
         if sim > sim_limit:
             continue
-        # 7) Like: perlu ada sekurang-kurangnya satu digit
         if likes and not any(d in likes for d in digs):
             continue
-        # 8) Dislike: tiada digit terlarang
         if dislikes and any(d in dislikes for d in digs):
             continue
 
@@ -84,37 +84,23 @@ def filter_wheel_combos(
 
 def pick_from_base(base, index, arah="kiri"):
     """
-    Ambil digit dari setiap row (P1–P4) pada index tertentu,
-    susun ikut arah 'kiri' (P1→P4) atau 'kanan' (P4→P1).
+    Pilih satu digit dari setiap P1–P4 pada posisi `index`,
+    dan susun mengikut `arah`:
+      - 'kiri': P1 → P4
+      - 'kanan': P4 → P1
+
+    Returns:
+        String 4-digit hasil susunan.
     """
-    if not base or not (0 <= index < len(base[0])):
-        raise IndexError("index di luar julat")
+    if not (0 <= index < len(base[0])):
+        raise IndexError("index di luar julat panjang base")
 
     if arah == "kiri":
-        digits = [row[index] for row in base]  # P1 → P4
+        order = [0, 1, 2, 3]
     elif arah == "kanan":
-        digits = [row[index] for row in reversed(base)]  # P4 → P1
+        order = [3, 2, 1, 0]
     else:
         raise ValueError("arah mesti 'kiri' atau 'kanan'")
 
+    digits = [base[i][index] for i in order]
     return ''.join(digits)
-
-def generate_directional_combos(base, arah="kiri", lot="0.10"):
-    """
-    Jana semua kombinasi dari setiap index dalam base,
-    ikut arah kiri→kanan atau kanan→kiri.
-
-    Args:
-        base: list of 4 lists [P1, P2, P3, P4]
-        arah: 'kiri' atau 'kanan'
-        lot: string tambahan di hujung format #####
-
-    Returns:
-        List of "<num>#####<lot>" mengikut arah dan semua index
-    """
-    length = len(base[0])
-    combos = []
-    for idx in range(length):
-        num = pick_from_base(base, idx, arah=arah)
-        combos.append(f"{num}#####{lot}")
-    return combos
