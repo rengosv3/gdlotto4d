@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 from collections import Counter
 from strategies import generate_base
 
@@ -13,50 +15,69 @@ def show_analisis_tab(draws):
         st.warning("⚠️ Sila masukkan nombor 4 digit yang sah.")
         return
 
-    # Pilihan sliding window draw
     recent_n = st.slider("Jumlah draw terkini untuk analisis:", 10, len(draws), min(60, len(draws)), 5, key="anlz_recent")
     recent_draws = draws[-recent_n:]
-
-    # Pecahan posisi
     digits = list(input_number)
+
+    # Paparan posisi
     st.markdown("**📌 Posisi Digit:**")
     cols = st.columns(4)
     for i, d in enumerate(digits):
         cols[i].markdown(f"**P{i+1}:** `{d}`")
 
-    # Statistik per posisi
+    # Statistik
     st.markdown("---")
     st.subheader(f"📊 Statistik Digit (Last {recent_n} Draw)")
     last_hits = _get_last_hit(recent_draws)
     freqs = _get_frequency(recent_draws)
 
-    stats = []
+    stats, digit_score = [], 0
     for i, d in enumerate(digits):
         freq = freqs[i].get(d, 0)
         last_hit = last_hits.get(d, "N/A")
         status = "🔥 Hot" if freq >= (recent_n * 0.2) else "🧊 Cool"
+        score = freq * 1.5 + (recent_n - last_hit) * 0.5 if isinstance(last_hit, int) else 0
+        digit_score += score
         stats.append({
-            "Posisi": f"P{i+1}",
-            "Digit": d,
-            "Kekerapan": freq,
-            "Last Hit": last_hit,
-            "Status": status
+            "Posisi": f"P{i+1}", "Digit": d,
+            "Kekerapan": freq, "Last Hit": last_hit, "Status": status, "Skor": round(score, 1)
         })
     st.dataframe(pd.DataFrame(stats), use_container_width=True)
 
-    # Semakan strategi
+    # Pattern Detection
+    st.markdown("**🧠 Pola Dikesan:**")
+    if digits[0] == digits[1] or digits[2] == digits[3]:
+        st.info("💡 Terdapat pola kembar dalam nombor.")
+    if digits == sorted(digits):
+        st.info("📈 Pola menaik dikesan.")
+    if digits == sorted(digits, reverse=True):
+        st.info("📉 Pola menurun dikesan.")
+
+    # Sejarah padan
+    st.markdown("**🔁 Padanan Sejarah:**")
+    matches = []
+    for draw in draws:
+        target = draw["number"]
+        match_count = sum(1 for a, b in zip(digits, target) if a == b)
+        if match_count >= 3:
+            matches.append("".join(target))
+    if matches:
+        st.success(f"🎯 Nombor serupa (≥3 digit sepadan) pernah keluar: {', '.join(matches[:5])}")
+    else:
+        st.info("❌ Tiada padanan kuat ditemui dalam sejarah.")
+
+    # Strategi padanan
     st.markdown("---")
     st.subheader("✅ Semakan Dalam Base Strategi")
-    rows = []
+    rows, matrix = [], []
     for strat in strategies:
         try:
             base = generate_base(recent_draws, method=strat, recent_n=recent_n)
             flags = ["✅" if digits[i] in base[i] else "❌" for i in range(4)]
+            matrix.append([1 if x == "✅" else 0 for x in flags])
             rows.append({
-                "Strategi": strat,
-                "P1": flags[0], "P2": flags[1],
-                "P3": flags[2], "P4": flags[3],
-                "✅ Total": flags.count("✅")
+                "Strategi": strat, "P1": flags[0], "P2": flags[1],
+                "P3": flags[2], "P4": flags[3], "✅ Total": flags.count("✅")
             })
         except Exception:
             continue
@@ -67,23 +88,48 @@ def show_analisis_tab(draws):
 
     df = pd.DataFrame(rows).sort_values("✅ Total", ascending=False)
     best = df.iloc[0]
+    strategy_score = best["✅ Total"] * 2  # beratkan strategi
+
+    # Highlight posisi lemah
+    weak_pos = [f"P{i+1}" for i, val in enumerate(df.iloc[0][["P1", "P2", "P3", "P4"]]) if val == "❌"]
+    if weak_pos:
+        st.warning(f"📉 Posisi lemah: {', '.join(weak_pos)}")
+
     st.success(f"🎯 Strategi terbaik: `{best['Strategi']}` dengan `{best['✅ Total']}/4` padanan digit.")
-    st.markdown(f"### ⭐ Skor Keseluruhan: `{best['✅ Total']}/4`")
+    st.markdown(f"### ⭐ Skor Strategi: `{strategy_score}/8`")
     st.dataframe(df, use_container_width=True)
 
+    # Heatmap
+    st.markdown("**🧊 Heatmap Strategi vs Posisi**")
+    heat_df = pd.DataFrame(matrix, columns=["P1", "P2", "P3", "P4"], index=[r["Strategi"] for r in rows])
+    fig, ax = plt.subplots()
+    sns.heatmap(heat_df, cmap="YlGnBu", annot=True, cbar=False, ax=ax)
+    st.pyplot(fig)
 
+    # Total Score
+    total_score = digit_score + strategy_score
+    rating = "🟢 Bagus" if total_score >= 70 else "🟡 Sederhana" if total_score >= 40 else "🔴 Lemah"
+    st.markdown("---")
+    st.markdown(f"## 🧮 Skor Keseluruhan: `{int(total_score)}/100` - {rating}")
+
+    # Syor
+    if total_score >= 70:
+        st.success(f"✅ **Syor**: Nombor `{input_number}` disyorkan untuk dimainkan.")
+    elif total_score >= 40:
+        st.warning(f"⚠️ **Pertimbangan**: `{input_number}` boleh dicuba, tapi risiko sederhana.")
+    else:
+        st.error(f"❌ **Amaran**: `{input_number}` tidak sesuai dimainkan buat masa ini.")
+
+# Functions
 def _get_last_hit(draws):
-    """Kira draw ke berapa terakhir setiap digit muncul (global, bukan ikut posisi)"""
     last_seen = {}
-    for i, draw in enumerate(draws[::-1]):  # draw terbaru ke lama
+    for i, draw in enumerate(draws[::-1]):
         for d in draw["number"]:
             if d not in last_seen:
                 last_seen[d] = i + 1
     return last_seen
 
-
 def _get_frequency(draws):
-    """Kira kekerapan setiap digit ikut posisi"""
     pos_freq = [Counter() for _ in range(4)]
     for draw in draws:
         number = draw["number"]
