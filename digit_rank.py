@@ -24,10 +24,9 @@ def show_digit_rank_tab(draws):
     os.makedirs("data", exist_ok=True)
 
     for pos in selected_positions:
-        # Kira Hit Frequency
+        # 1. Hit Frequency → dari recent_draws
         counter = Counter()
         total_slots = 0
-
         for draw in recent_draws:
             number = f"{int(draw['number']):04d}"
             digit = f"{int(number[pos]):02d}"
@@ -37,21 +36,21 @@ def show_digit_rank_tab(draws):
         freq_df = pd.DataFrame(counter.items(), columns=["Digit", "Times Hit"])
         freq_df["Hit Frequency"] = freq_df["Times Hit"] / total_slots * 100
 
-        # Kira Last Hit
+        # 2. Last Hit → dari seluruh draws
         last_hit = defaultdict(lambda: {"index": None})
-        for idx in reversed(range(len(recent_draws))):
-            number = f"{int(recent_draws[idx]['number']):04d}"
+        for idx in reversed(range(len(draws))):
+            number = f"{int(draws[idx]['number']):04d}"
             digit = f"{int(number[pos]):02d}"
             if last_hit[digit]["index"] is None:
                 last_hit[digit]["index"] = idx
 
-        # Gabung DataFrame
+        # 3. Gabungkan hasil
         rows = []
         for d in range(10):
             digit = f"{d:02d}"
             freq_row = freq_df[freq_df["Digit"] == digit]
             freq = float(freq_row["Hit Frequency"]) if not freq_row.empty else 0.0
-            skipped = len(recent_draws) - 1 - last_hit[digit]["index"] if last_hit[digit]["index"] is not None else n_draws
+            skipped = len(draws) - 1 - last_hit[digit]["index"] if last_hit[digit]["index"] is not None else len(draws)
 
             if freq >= 12.0 and skipped <= 3:
                 status = "🔥 Hot"
