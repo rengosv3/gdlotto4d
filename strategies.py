@@ -11,7 +11,7 @@ def generate_base(draws, method='frequency', recent_n=50):
         'frequency': recent_n,
         'gap': recent_n,
         'hybrid': recent_n,
-        'break': 0,  # sebab baca dari fail
+        'break': 0,  # sebab baca dari fail digit_rank_p*.txt
         'smartpattern': 60,
         'hitfq': recent_n
     }
@@ -70,10 +70,9 @@ def generate_base(draws, method='frequency', recent_n=50):
             df = pd.read_csv(filepath, sep="\t")
             subset = df[(df['Rank'] >= 6) & (df['Rank'] <= 10)]
             digits = subset["Digit"].astype(str).tolist()
-            result.append(digits)
+            result.append(digits)  # ⬅️ Simpan 5 digit ikut posisi
 
-        combinations = [''.join(p) for p in product(*result)]
-        return combinations
+        return result  # ⬅️ Bukan kombinasi 4D, tapi 5 digit setiap posisi
 
     # === SMARTPATTERN ===
     def smartpattern_method(draws_slice):
