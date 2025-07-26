@@ -1,10 +1,5 @@
 import pandas as pd
-from prediction import generate_base  # Pastikan generate_base ada dalam prediction.py
-
-# ========================================================
-# FUNGSI UTAMA BACKTEST (FULL 4 ✅)
-# ========================================================
-
+from strategies import generate_base
 def match_insight(fp: str, base: list[list[str]], reverse: bool = False) -> list[str]:
     digits = list(fp)
     if reverse:
