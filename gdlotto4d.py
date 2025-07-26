@@ -236,7 +236,7 @@ with tabs[8]:
 with tabs[9]:
     st.header("📁 Semak Fail Simpanan")
     files = [
-        "data/digit_rank.txt",
+        "data/digit_rank_p1.txt",
         "data/base_last.txt",
         "data/draws.txt"
     ]
