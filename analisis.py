@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 from collections import Counter
 from strategies import generate_base
 
@@ -88,7 +88,7 @@ def show_analisis_tab(draws):
 
     df = pd.DataFrame(rows).sort_values("✅ Total", ascending=False)
     best = df.iloc[0]
-    strategy_score = best["✅ Total"] * 2  # beratkan strategi
+    strategy_score = best["✅ Total"] * 2
 
     # Highlight posisi lemah
     weak_pos = [f"P{i+1}" for i, val in enumerate(df.iloc[0][["P1", "P2", "P3", "P4"]]) if val == "❌"]
@@ -107,10 +107,10 @@ def show_analisis_tab(draws):
     st.pyplot(fig)
 
     # Total Score
-    total_score = digit_score + strategy_score
+    total_score = min(int(digit_score + strategy_score), 100)
     rating = "🟢 Bagus" if total_score >= 70 else "🟡 Sederhana" if total_score >= 40 else "🔴 Lemah"
     st.markdown("---")
-    st.markdown(f"## 🧮 Skor Keseluruhan: `{int(total_score)}/100` - {rating}")
+    st.markdown(f"## 🧮 Skor Keseluruhan: `{total_score}/100` - {rating}")
 
     # Syor
     if total_score >= 70:
@@ -119,6 +119,29 @@ def show_analisis_tab(draws):
         st.warning(f"⚠️ **Pertimbangan**: `{input_number}` boleh dicuba, tapi risiko sederhana.")
     else:
         st.error(f"❌ **Amaran**: `{input_number}` tidak sesuai dimainkan buat masa ini.")
+
+    # Cadangan Nombor
+    st.markdown("---")
+    st.subheader("🤖 Cadangan Nombor Alternatif")
+
+    hot_digits = list({d for pos in freqs for d, _ in pos.most_common(2)})
+    suggestions = set()
+
+    for i in range(4):
+        for hot in hot_digits:
+            if hot != digits[i]:
+                new_num = digits.copy()
+                new_num[i] = hot
+                suggestions.add("".join(new_num))
+            if len(suggestions) >= 6:
+                break
+
+    suggestions = sorted(suggestions)[:6]
+    if suggestions:
+        st.markdown("Cadangan berdasarkan pertukaran digit hot:")
+        st.write(", ".join(f"`{s}`" for s in suggestions))
+    else:
+        st.info("❌ Tiada cadangan sesuai dijana.")
 
 # Functions
 def _get_last_hit(draws):
