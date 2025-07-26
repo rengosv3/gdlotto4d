@@ -57,7 +57,7 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) ->
 
     # Langkah 1: base_last dari semua draws kecuali terakhir
     if len(draws) >= 51:
-        base_before = generate_base(draws[:-1], method='frequency', recent_n=50)
+        base_before = generate_base(draws[:-1], method='break', recent_n=50)
         save_base_to_file(base_before, 'data/base_last.txt')
     else:
         last_fp = 'data/base_last.txt'
