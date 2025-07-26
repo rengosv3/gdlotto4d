@@ -126,6 +126,12 @@ with tabs[1]:
         st.code('\n'.join(preds), language='text')
     except Exception as e:
         st.error(str(e))
+        
+st.markdown("---")
+with st.expander("📡 Nombor Ramalan AI (Eksklusif)"):
+        ai_predictions = generate_ai_predictions()
+        st.success("Nombor AI:")
+        st.code('\n'.join(ai_predictions), language='text')
 
 # Tab 3: Backtest
 with tabs[2]:
