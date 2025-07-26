@@ -94,6 +94,8 @@ def show_analisis_tab(draws):
     weak_pos = [f"P{i+1}" for i, val in enumerate(df.iloc[0][["P1", "P2", "P3", "P4"]]) if val == "❌"]
     if weak_pos:
         st.warning(f"📉 Posisi lemah: {', '.join(weak_pos)}")
+    else:
+        st.info("✅ Tiada posisi lemah dikesan.")
 
     st.success(f"🎯 Strategi terbaik: `{best['Strategi']}` dengan `{best['✅ Total']}/4` padanan digit.")
     st.markdown(f"### ⭐ Skor Strategi: `{strategy_score}/8`")
@@ -120,26 +122,52 @@ def show_analisis_tab(draws):
     else:
         st.error(f"❌ **Amaran**: `{input_number}` tidak sesuai dimainkan buat masa ini.")
 
-    # Cadangan Nombor
+    # Cadangan nombor berdasarkan posisi lemah + skor strategi
     st.markdown("---")
-    st.subheader("🤖 Cadangan Nombor Alternatif")
+    st.subheader("🤖 Cadangan Nombor Alternatif (Posisi Lemah + Skor Strategi)")
 
-    hot_digits = list({d for pos in freqs for d, _ in pos.most_common(2)})
-    suggestions = set()
+    hot_digits = list({d for pos in freqs for d, _ in pos.most_common(3)})
+    suggestions = []
 
-    for i in range(4):
+    # Jika tiada posisi lemah, anggap semua posisi terbuka
+    if not weak_pos:
+        weak_indexes = [0, 1, 2, 3]
+    else:
+        weak_indexes = [int(p[1]) - 1 for p in weak_pos]
+
+    tested = set()
+
+    for idx in weak_indexes:
         for hot in hot_digits:
-            if hot != digits[i]:
+            if hot != digits[idx]:
                 new_num = digits.copy()
-                new_num[i] = hot
-                suggestions.add("".join(new_num))
-            if len(suggestions) >= 6:
+                new_num[idx] = hot
+                cand_num = "".join(new_num)
+                if cand_num in tested:
+                    continue
+                tested.add(cand_num)
+
+                # Penilaian strategi untuk cadangan
+                try:
+                    matches = 0
+                    for strat in strategies:
+                        base = generate_base(recent_draws, method=strat, recent_n=recent_n)
+                        flags = [1 if new_num[i] in base[i] else 0 for i in range(4)]
+                        matches += sum(flags)
+                    score = matches * 2
+                    suggestions.append({
+                        "Nombor": cand_num,
+                        "Strategi Match": matches,
+                        "Skor": score
+                    })
+                except Exception:
+                    continue
+            if len(suggestions) >= 12:
                 break
 
-    suggestions = sorted(suggestions)[:6]
     if suggestions:
-        st.markdown("Cadangan berdasarkan pertukaran digit hot:")
-        st.write(", ".join(f"`{s}`" for s in suggestions))
+        df_sug = pd.DataFrame(suggestions).sort_values("Skor", ascending=False)
+        st.dataframe(df_sug, use_container_width=True)
     else:
         st.info("❌ Tiada cadangan sesuai dijana.")
 
