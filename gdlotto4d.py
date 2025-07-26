@@ -9,7 +9,7 @@ from utils import (
 from draw_scraper import update_draws
 from strategies import generate_base
 from prediction import generate_predictions_from_base, generate_ai_predictions
-from backtest import run_backtest
+from backtest import run_backtest, evaluate_strategies
 from wheelpick import (
     get_like_dislike_digits,
     generate_wheel_combos,
@@ -125,7 +125,6 @@ with tabs[1]:
         st.markdown("**🔢 Top 10 Ramalan:**")
         st.code('\n'.join(preds), language='text')
 
-        # ——— AI Predictions ———
         st.markdown("---")
         with st.expander("📡 Nombor Ramalan AI (Eksklusif)"):
             ai_predictions = generate_ai_predictions()
@@ -155,6 +154,14 @@ with tabs[2]:
             )
             st.success(f"🎯 Matched: {matched} daripada {rounds}")
             st.dataframe(df_bt, use_container_width=True)
+
+            st.markdown("---")
+            st.subheader("📊 Evaluasi Semua Strategi (Top Hit Rate)")
+            df_eval = evaluate_strategies(draws, test_n=rounds)
+            st.dataframe(df_eval, use_container_width=True)
+            best = df_eval.iloc[0]
+            st.success(f"🎯 Strategi terbaik: `{best['Strategy']}` dengan purata hit rate {best['Avg Hit Rate']}%")
+
         except Exception as e:
             st.error(str(e))
 
