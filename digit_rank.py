@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from collections import Counter, defaultdict
+from collections import Counter
 import os
 
 def show_digit_rank_tab(draws):
@@ -24,33 +24,32 @@ def show_digit_rank_tab(draws):
     os.makedirs("data", exist_ok=True)
 
     for pos in selected_positions:
-        # 1. Hit Frequency → dari recent_draws
+        # 1. Hit Frequency
         counter = Counter()
-        total_slots = 0
         for draw in recent_draws:
             number = f"{int(draw['number']):04d}"
             digit = f"{int(number[pos]):02d}"
             counter[digit] += 1
-            total_slots += 1
 
         freq_df = pd.DataFrame(counter.items(), columns=["Digit", "Times Hit"])
-        freq_df["Hit Frequency"] = freq_df["Times Hit"] / total_slots * 100
+        freq_df["Hit Frequency"] = freq_df["Times Hit"] / len(recent_draws) * 100
 
-        # 2. Last Hit → dari seluruh draws
-        last_hit = defaultdict(lambda: {"index": None})
-        for idx in reversed(range(len(draws))):
-            number = f"{int(draws[idx]['number']):04d}"
+        # 2. Last Hit & Games Skipped → dalam recent_draws sahaja
+        last_seen = {}
+        for idx in reversed(range(len(recent_draws))):
+            number = f"{int(recent_draws[idx]['number']):04d}"
             digit = f"{int(number[pos]):02d}"
-            if last_hit[digit]["index"] is None:
-                last_hit[digit]["index"] = idx
+            if digit not in last_seen:
+                last_seen[digit] = idx
 
         # 3. Gabungkan hasil
         rows = []
         for d in range(10):
             digit = f"{d:02d}"
-            freq_row = freq_df[freq_df["Digit"] == digit]
-            freq = float(freq_row["Hit Frequency"]) if not freq_row.empty else 0.0
-            skipped = len(draws) - 1 - last_hit[digit]["index"] if last_hit[digit]["index"] is not None else len(draws)
+            freq = freq_df[freq_df["Digit"] == digit]["Hit Frequency"].values
+            freq = float(freq[0]) if len(freq) > 0 else 0.0
+            skipped = last_seen.get(digit)
+            skipped = len(recent_draws) - 1 - skipped if skipped is not None else n_draws
 
             if freq >= 12.0 and skipped <= 3:
                 status = "🔥 Hot"
