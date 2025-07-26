@@ -1,6 +1,8 @@
+# strategy.py
 import os
 import pandas as pd
 from collections import Counter, defaultdict
+from itertools import product
 from wheelpick import get_like_dislike_digits
 
 def generate_base(draws, method='frequency', recent_n=50):
@@ -57,27 +59,23 @@ def generate_base(draws, method='frequency', recent_n=50):
             combined.append([d for d, _ in cnt.most_common(5)])
         return combined
 
-    # === BREAK (from digit_rank.txt, ambil Rank 6–10) ===
+    # === BREAK (from digit_rank.txt, ambil Rank 6–10 per Pos, dan gabung semua jadi 4D)
     def break_method_from_digit_rank(filepath='data/digit_rank.txt'):
-        result = [[] for _ in range(4)]
-
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"{filepath} tidak wujud")
 
-        with open(filepath, 'r') as f:
-            for line in f:
-                parts = line.strip().split(',')
-                if len(parts) != 5:
-                    continue
-                pos = int(parts[0].replace('P', '')) - 1
-                rank = int(parts[1])
-                digit = parts[2]
-                if 6 <= rank <= 10:
-                    result[pos].append(digit)
+        df = pd.read_csv(filepath, sep="\t")
+        result = []
 
-        return result
+        for pos in ['P1', 'P2', 'P3', 'P4']:
+            subset = df[(df['Rank'] >= 6) & (df['Rank'] <= 10) & (df['Pos'] == pos)]
+            digits = subset["Digit"].astype(str).tolist()
+            result.append(digits)
 
-    # === SMARTPATTERN (gabung 4 strategi, majoriti undi) ===
+        combinations = [''.join(p) for p in product(*result)]
+        return combinations
+
+    # === SMARTPATTERN ===
     def smartpattern_method(draws_slice):
         strategies = [
             generate_base(draws_slice, 'frequency', 50),
