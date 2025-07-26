@@ -8,7 +8,7 @@ from utils import (
 )
 from draw_scraper import update_draws
 from strategies import generate_base
-from prediction import generate_predictions_from_base
+from prediction import generate_predictions_from_base, generate_ai_predictions
 from backtest import run_backtest
 from wheelpick import (
     get_like_dislike_digits,
@@ -124,14 +124,16 @@ with tabs[1]:
         preds = generate_predictions_from_base(base, max_preds=10)
         st.markdown("**🔢 Top 10 Ramalan:**")
         st.code('\n'.join(preds), language='text')
+
+        # ——— AI Predictions ———
+        st.markdown("---")
+        with st.expander("📡 Nombor Ramalan AI (Eksklusif)"):
+            ai_predictions = generate_ai_predictions()
+            st.success("Nombor AI:")
+            st.code('\n'.join(ai_predictions), language='text')
+
     except Exception as e:
         st.error(str(e))
-        
-st.markdown("---")
-with st.expander("📡 Nombor Ramalan AI (Eksklusif)"):
-        ai_predictions = generate_ai_predictions()
-        st.success("Nombor AI:")
-        st.code('\n'.join(ai_predictions), language='text')
 
 # Tab 3: Backtest
 with tabs[2]:
@@ -173,16 +175,13 @@ with tabs[4]:
     dislikes = user_dislike.split()
 
     input_mode = st.radio("Input Base:", ["Auto dari strategi", "Manual"], key="wp_mode")
-
     if input_mode == "Auto dari strategi":
-        strategies = ['frequency', 'polarity_shift', 'hybrid', 'break', 'smartpattern', 'hitfq']
         strat_wp = st.selectbox("Strategi Base:", strategies, key="wp_strat")
         recent_wp = st.slider("Draw untuk base:", 5, len(draws), 30, 5, key="wp_n")
         try:
             base_wp = generate_base(draws, method=strat_wp, recent_n=recent_wp)
         except Exception as e:
-            st.error(str(e))
-            st.stop()
+            st.error(str(e)); st.stop()
     else:
         manual_base = st.text_area("Masukkan Base Manual (4 baris, digit pisah space)", height=120, key="wp_manual")
         try:
@@ -190,11 +189,9 @@ with tabs[4]:
             if len(base_wp) != 4 or any(not p for p in base_wp):
                 raise ValueError("Format base tak sah.")
         except Exception as e:
-            st.error(f"Base manual error: {str(e)}")
-            st.stop()
+            st.error(f"Base manual error: {str(e)}"); st.stop()
 
     lot = st.text_input("Nilai Lot:", value="0.10", key="wp_lot")
-
     with st.expander("⚙️ Tapisan Tambahan"):
         no_repeat = st.checkbox("Buang digit ulang", key="f1")
         no_triple = st.checkbox("Buang triple", key="f2")
@@ -233,7 +230,7 @@ with tabs[6]:
 # Tab 8: Digit Rank
 with tabs[7]:
     show_digit_rank_tab(draws)
-    
+
 # Tab 9: Analisis 
 with tabs[8]:
     show_analisis_tab(draws)
@@ -251,6 +248,6 @@ with tabs[9]:
         try:
             with open(f) as fp:
                 content = fp.read()
-                st.code(content, language="text")
+                st.code(content, language='text')
         except Exception as e:
             st.error(f"❌ Gagal baca fail: {str(e)}")
