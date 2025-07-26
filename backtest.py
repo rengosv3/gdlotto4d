@@ -1,5 +1,9 @@
 import pandas as pd
-from strategies import generate_base  # atau prediction.py jika itu lokasi asal
+from prediction import generate_base  # Pastikan generate_base ada dalam prediction.py
+
+# ========================================================
+# FUNGSI UTAMA BACKTEST (FULL 4 ✅)
+# ========================================================
 
 def match_insight(fp: str, base: list[list[str]], reverse: bool = False) -> list[str]:
     digits = list(fp)
@@ -42,13 +46,12 @@ def run_backtest(
 
     df = pd.DataFrame(records[::-1])
 
-    # Kira draw yang full 4 ✅ sahaja
-    matched = sum(insight.count('✅') == 4 for insight in [r['Insight'].split() for r in records])
+    # ✅ Betulkan: Kira draw yang full 4 ✅ sahaja
+    matched = sum(all(s.endswith("✅") for s in r['Insight'].split()) for r in records)
     return df, matched
 
-
 # ========================================================
-# Tambahan: Evaluasi Semua Strategi (Avg Hit Rate)
+# FUNGSI TAMBAHAN: EVALUATE SEMUA STRATEGI
 # ========================================================
 
 strategies = ['frequency', 'polarity_shift', 'hybrid', 'break', 'smartpattern', 'hitfq']
