@@ -1,8 +1,10 @@
-# utils.py
 import os
 import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+from strategies import generate_base  # Tambahan
+# Nota: pastikan tiada circular import dari strategies
 
 def get_draw_countdown_from_last_8pm():
     now = datetime.now(ZoneInfo("Asia/Kuala_Lumpur"))
@@ -32,3 +34,10 @@ def load_base_from_file(file_path='data/base.txt'):
         return []
     with open(file_path, 'r') as f:
         return [line.strip().split() for line in f if line.strip()]
+
+# ✅ Tambah fungsi ini
+def update_base_today():
+    draws = load_draws('data/draws.txt')
+    if len(draws) >= 50:
+        base_now = generate_base(draws, method='break', recent_n=50)
+        save_base_to_file(base_now, 'data/base.txt')
