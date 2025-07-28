@@ -56,15 +56,6 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181, up
 
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    # Langkah 1: base_last dari semua draws kecuali terakhir
-    if len(draws) >= 51:
-        base_before = generate_base(draws[:-1], method='break', recent_n=50)
-        save_base_to_file(base_before, 'data/base_last.txt')
-    else:
-        last_fp = 'data/base_last.txt'
-        if os.path.exists(last_fp):
-            os.remove(last_fp)
-
     # Langkah 2: scrape & append
     with open(file_path, 'a') as f:
         while current <= latest_date:
@@ -77,11 +68,21 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181, up
                 f.write(f"{ds} {prize}\n")
                 added.append(ds)
 
-    # Langkah 3: hanya update base.txt jika benar-benar diminta
+    # Langkah 3: jika ada draw baru, update base_last.txt
+    if added:
+        draws_updated = load_draws(file_path)
+        if len(draws_updated) >= 51:
+            base_before = generate_base(draws_updated[:-1], method='break', recent_n=50)
+            save_base_to_file(base_before, 'data/base_last.txt')
+    else:
+        # Tidak usik base_last.txt jika tiada draw baru
+        pass
+
+    # Langkah 4: jika diminta, update base.txt
     if update_base:
-        updated = load_draws(file_path)
-        if len(updated) >= 50:
-            base_now = generate_base(updated, method='break', recent_n=50)
+        draws_updated = load_draws(file_path)
+        if len(draws_updated) >= 50:
+            base_now = generate_base(draws_updated, method='break', recent_n=50)
             save_base_to_file(base_now, 'data/base.txt')
 
     return f"✔️ {len(added)} draw baru ditambah." if added else "✔️ Tiada draw baru."
