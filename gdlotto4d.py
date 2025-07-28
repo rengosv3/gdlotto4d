@@ -32,7 +32,11 @@ with col1:
         st.success(msg)
         st.markdown("### 📋 Base Hari Ini")
         base_txt = load_base_from_file()
-        st.code('\n'.join([' '.join(p) for p in base_txt]) or "Buat Di Ramalan", language='text')
+        if base_txt:
+            st.code('\n'.join([' '.join(p) for p in base_txt]), language='text')
+        else:
+            best_strat = st.session_state.get("best_strategy", "break")
+            st.warning(f"Buat base di **Ramalan - Suggested** ({best_strat})")
 with col2:
     st.markdown("""
     <a href="https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845" target="_blank">
@@ -160,6 +164,7 @@ with tabs[2]:
             df_eval = evaluate_strategies(draws, test_n=rounds)
             st.dataframe(df_eval, use_container_width=True)
             best = df_eval.iloc[0]
+            st.session_state["best_strategy"] = best['Strategy']
             st.success(f"🎯 Strategi terbaik: `{best['Strategy']}` dengan purata hit rate {best['Avg Hit Rate']}%")
 
         except Exception as e:
@@ -258,6 +263,7 @@ with tabs[9]:
                 st.code(content, language='text')
         except Exception as e:
             st.error(f"❌ Gagal baca fail: {str(e)}")
+
 # --- Link Hubungi Admin ---
 st.markdown("---")
 st.markdown("""
