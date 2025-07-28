@@ -258,3 +258,12 @@ with tabs[9]:
                 st.code(content, language='text')
         except Exception as e:
             st.error(f"❌ Gagal baca fail: {str(e)}")
+# --- Link Hubungi Admin ---
+st.markdown("---")
+st.markdown("""
+<a href="https://t.me/rengosv3" target="_blank">
+  <button style="width:100%;padding:0.6em;font-size:16px;background:#0088cc;color:white;border:none;border-radius:5px;">
+    💬 Hubungi Admin @rengosv3 di Telegram
+  </button>
+</a>
+""", unsafe_allow_html=True)
