@@ -28,10 +28,11 @@ def get_1st_prize(date_str: str) -> str | None:
         print(f"❌ Ralat semasa request untuk {date_str}: {e}")
     return None
 
-def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) -> str:
+def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181, update_base: bool = False) -> str:
     """
     Update 'data/draws.txt' dengan draw baru sehingga result terakhir yang mungkin keluar.
     Hanya ambil draw hari ini jika jam sekarang >= 8 malam waktu Malaysia.
+    Jika update_base=True, akan update 'data/base.txt' juga.
     """
     draws = load_draws(file_path)
     existing = {d['date'] for d in draws}
@@ -61,7 +62,8 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) ->
         save_base_to_file(base_before, 'data/base_last.txt')
     else:
         last_fp = 'data/base_last.txt'
-        if os.path.exists(last_fp): os.remove(last_fp)
+        if os.path.exists(last_fp):
+            os.remove(last_fp)
 
     # Langkah 2: scrape & append
     with open(file_path, 'a') as f:
@@ -75,10 +77,11 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) ->
                 f.write(f"{ds} {prize}\n")
                 added.append(ds)
 
-    # Langkah 3: base terkini
-    updated = load_draws(file_path)
-    if len(updated) >= 50:
-        base_now = generate_base(updated, method='break', recent_n=50)
-        save_base_to_file(base_now, 'data/base.txt')
+    # Langkah 3: hanya update base.txt jika benar-benar diminta
+    if update_base:
+        updated = load_draws(file_path)
+        if len(updated) >= 50:
+            base_now = generate_base(updated, method='break', recent_n=50)
+            save_base_to_file(base_now, 'data/base.txt')
 
     return f"✔️ {len(added)} draw baru ditambah." if added else "✔️ Tiada draw baru."
