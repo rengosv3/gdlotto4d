@@ -32,7 +32,7 @@ with col1:
         st.success(msg)
         st.markdown("### 📋 Base Hari Ini")
         base_txt = load_base_from_file()
-        st.code('\n'.join([' '.join(p) for p in base_txt]) or "Tiada base.", language='text')
+        st.code('\n'.join([' '.join(p) for p in base_txt]) or "Buat Di Ramalan", language='text')
 with col2:
     st.markdown("""
     <a href="https://batman11.net/RegisterByReferral.aspx?MemberCode=BB1845" target="_blank">
