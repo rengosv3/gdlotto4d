@@ -1,92 +1,36 @@
+import streamlit as st
 import pandas as pd
+
+from utils import load_draws
 from strategies import generate_base
-def match_insight(fp: str, base: list[list[str]], reverse: bool = False) -> list[str]:
-    digits = list(fp)
-    if reverse:
-        digits = digits[::-1]
-    return ["✅" if digits[i] in base[i] else "❌" for i in range(4)]
+from backtest import run_backtest, evaluate_strategies
 
-def run_backtest(
-    draws: list[dict],
-    strategy: str = 'hybrid',
-    recent_n: int = 50,
-    arah: str = 'left',
-    backtest_rounds: int = 10
-) -> tuple[pd.DataFrame, int]:
-    total = len(draws)
-    min_req = {'frequency':50, 'gap':120, 'hybrid':50, 'qaisara':60, 'smartpattern':60}
-    req = min_req.get(strategy, 50)
-    if total < backtest_rounds + req:
-        raise ValueError(f"Not enough draws for backtest '{strategy}': "
-                         f"need {backtest_rounds+req}, have {total}")
+strategies_available = ['frequency', 'polarity_shift', 'hybrid', 'break', 'smartpattern', 'hitfq']
 
-    reverse = True if arah == 'right' else False
-    records = []
+def show_backtest_tab():
+    st.subheader("🔁 Backtest Strategi")
 
-    for i in range(backtest_rounds):
-        test_draw = draws[-(i+1)]
-        past_draws = draws[:-(i+1)]
+    draws = load_draws()
+    if len(draws) < 100:
+        st.warning("Data draw belum cukup. Minimum 100 draw diperlukan untuk backtest.")
+        return
 
-        if strategy == 'smartpattern':
-            base = generate_base(past_draws, method=strategy)
-        else:
-            base = generate_base(past_draws, method=strategy, recent_n=recent_n)
+    col1, col2 = st.columns(2)
+    with col1:
+        strategy = st.selectbox("Pilih Strategi", strategies_available, index=2)
+        arah = st.selectbox("Arah", ['left', 'right'], index=0)
+    with col2:
+        recent_n = st.slider("Bilangan Draw Terkini", 30, 100, 50, step=5)
+        bt_rounds = st.slider("Bilangan Ujian (round)", 5, 30, 10, step=1)
 
-        insight = match_insight(test_draw['number'], base, reverse)
-        records.append({
-            'Tarikh': test_draw['date'],
-            'Result 1st': test_draw['number'],
-            'Insight': ' '.join(f"P{j+1}:{s}" for j, s in enumerate(insight))
-        })
-
-    df = pd.DataFrame(records[::-1])
-
-    # ✅ Betulkan: Kira draw yang full 4 ✅ sahaja
-    matched = sum(all(s.endswith("✅") for s in r['Insight'].split()) for r in records)
-    return df, matched
-
-# ========================================================
-# FUNGSI TAMBAHAN: EVALUATE SEMUA STRATEGI
-# ========================================================
-
-strategies = ['frequency', 'polarity_shift', 'hybrid', 'break', 'smartpattern', 'hitfq']
-
-def evaluate_strategies(draws, test_n=20):
-    results = []
-
-    for method in strategies:
+    if st.button("Run Backtest"):
         try:
-            correct_total = 0
-            tested = 0
-
-            for i in range(test_n):
-                subset = draws[:-(test_n - i)]
-                actual = draws[-(test_n - i)]['number']
-
-                try:
-                    base = generate_base(subset, method)
-                except Exception:
-                    continue
-
-                match = sum([actual[pos] in base[pos] for pos in range(4)])
-                correct_total += match
-                tested += 1
-
-            avg_hit = correct_total / (tested * 4) if tested > 0 else 0
-            results.append({
-                'Strategy': method,
-                'Avg Hit Rate': round(avg_hit * 100, 2),
-                'Tested Draws': tested,
-                'Total Match': correct_total
-            })
-
+            df, matched = run_backtest(draws, strategy=strategy, recent_n=recent_n, arah=arah, backtest_rounds=bt_rounds)
+            st.success(f"Jumlah draw dengan 4 digit padanan penuh: {matched} / {bt_rounds}")
+            st.dataframe(df, use_container_width=True)
         except Exception as e:
-            results.append({
-                'Strategy': method,
-                'Avg Hit Rate': 0,
-                'Tested Draws': 0,
-                'Total Match': 0,
-                'Error': str(e)
-            })
+            st.error(f"Ralat: {e}")
 
-    return pd.DataFrame(results).sort_values(by='Avg Hit Rate', ascending=False).reset_index(drop=True)
+    with st.expander("📊 Penilaian Semua Strategi"):
+        eval_df = evaluate_strategies(draws)
+        st.dataframe(eval_df, use_container_width=True)
