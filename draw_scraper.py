@@ -78,7 +78,7 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) ->
     # Langkah 3: base terkini
     updated = load_draws(file_path)
     if len(updated) >= 50:
-        base_now = generate_base(updated, method='frequency', recent_n=50)
+        base_now = generate_base(updated, method='break', recent_n=50)
         save_base_to_file(base_now, 'data/base.txt')
 
     return f"✔️ {len(added)} draw baru ditambah." if added else "✔️ Tiada draw baru."
