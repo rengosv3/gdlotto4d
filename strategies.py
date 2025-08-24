@@ -1,7 +1,6 @@
 import os
 import pandas as pd
-from collections import Counter, defaultdict
-from itertools import product
+from collections import Counter
 from wheelpick import get_like_dislike_digits
 
 def generate_base(draws, method='frequency', recent_n=50):
@@ -11,7 +10,7 @@ def generate_base(draws, method='frequency', recent_n=50):
         'frequency': recent_n,
         'polarity_shift': recent_n,
         'hybrid': recent_n,
-        'break': 0,  # sebab baca dari fail digit_rank_p*.txt
+        'break': recent_n,
         'smartpattern': 60,
         'hitfq': recent_n
     }
@@ -66,16 +65,17 @@ def generate_base(draws, method='frequency', recent_n=50):
         return combined
 
     # === BREAK ===
-    def break_method_from_digit_rank():
+    def generate_break_base(draws_slice, n):
+        recent_draws = draws_slice[-n:]
         result = []
-        for i in range(1, 5):
-            filepath = f"data/digit_rank_p{i}.txt"
-            if not os.path.exists(filepath):
-                raise FileNotFoundError(f"{filepath} tidak wujud")
-            df = pd.read_csv(filepath, sep="\t")
-            subset = df[(df['Rank'] >= 6) & (df['Rank'] <= 10)]
-            digits = subset["Digit"].astype(str).tolist()
-            result.append(digits)
+
+        for i in range(4):
+            pos_digits = [f"{int(d['number']):04d}"[i] for d in recent_draws]
+            counter = Counter(pos_digits)
+            top10 = counter.most_common(10)
+            selected = [digit for digit, _ in top10[5:10]]  # Rank 6–10
+            result.append(selected)
+
         return result
 
     # === SMARTPATTERN ===
@@ -117,7 +117,7 @@ def generate_base(draws, method='frequency', recent_n=50):
     elif method == 'hybrid':
         return hybrid_method(draws, recent_n)
     elif method == 'break':
-        return break_method_from_digit_rank()
+        return generate_break_base(draws, recent_n)
     elif method == 'smartpattern':
         return smartpattern_method(draws)
     elif method == 'hitfq':

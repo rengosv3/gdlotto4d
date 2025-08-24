@@ -8,44 +8,33 @@ from utils import load_draws, save_base_to_file
 from strategies import generate_base
 
 def get_1st_prize(date_str: str) -> str | None:
-    """
-    Scrape 1st prize 4D untuk tarikh YYYY-MM-DD.
-    Pulangkan string 4-digit jika jumpa, else None.
-    """
     url = f"https://gdlotto.net/results/ajax/_result.aspx?past=1&d={date_str}"
     try:
         resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
         if resp.status_code != 200:
-            print(f"❌ Status bukan 200 untuk {date_str}: {resp.status_code}")
             return None
         soup = BeautifulSoup(resp.text, "html.parser")
         prize_tag = soup.find("span", id="1stPz")
         txt = prize_tag.text.strip() if prize_tag else ""
         if txt.isdigit() and len(txt) == 4:
             return txt
-        print(f"❌ Tidak jumpa 1st Prize untuk {date_str}")
-    except Exception as e:
-        print(f"❌ Ralat semasa request untuk {date_str}: {e}")
+    except:
+        pass
     return None
 
-def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181, update_base: bool = False) -> str:
-    """
-    Update 'data/draws.txt' dengan draw baru sehingga result terakhir yang mungkin keluar.
-    Hanya ambil draw hari ini jika jam sekarang >= 8 malam waktu Malaysia.
-    Jika update_base=True, akan update 'data/base.txt' juga.
-    """
+def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181) -> str:
+    from utils import save_base_to_file
+    from strategies import generate_base
+
+    strategies = ['frequency', 'hybrid', 'break', 'smartpattern', 'polarity_shift', 'hitfq']
     draws = load_draws(file_path)
     existing = {d['date'] for d in draws}
 
-    # Masa semasa ikut waktu Malaysia
     tz = ZoneInfo("Asia/Kuala_Lumpur")
     now_my = datetime.now(tz)
-
-    # Jika jam sekarang >= 20:00, ambil hingga hari ini; jika belum, ambil hingga semalam
     cutoff_hour = 20
     latest_date = now_my.date() if now_my.hour >= cutoff_hour else (now_my - timedelta(days=1)).date()
 
-    # Tentukan tarikh mula scrape
     if draws:
         last_date = datetime.strptime(draws[-1]['date'], "%Y-%m-%d").date()
     else:
@@ -53,10 +42,8 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181, up
 
     current = last_date + timedelta(days=1)
     added = []
-
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-    # Langkah 2: scrape & append
     with open(file_path, 'a') as f:
         while current <= latest_date:
             ds = current.strftime("%Y-%m-%d")
@@ -68,21 +55,30 @@ def update_draws(file_path: str = 'data/draws.txt', max_days_back: int = 181, up
                 f.write(f"{ds} {prize}\n")
                 added.append(ds)
 
-    # Langkah 3: jika ada draw baru, update base_last.txt
-    if added:
-        draws_updated = load_draws(file_path)
-        if len(draws_updated) >= 51:
-            base_before = generate_base(draws_updated[:-1], method='break', recent_n=50)
-            save_base_to_file(base_before, 'data/base_last.txt')
-    else:
-        # Tidak usik base_last.txt jika tiada draw baru
-        pass
+    # Load semula draw selepas kemas kini
+    draws = load_draws(file_path)
 
-    # Langkah 4: jika diminta, update base.txt
-    if update_base:
-        draws_updated = load_draws(file_path)
-        if len(draws_updated) >= 50:
-            base_now = generate_base(draws_updated, method='break', recent_n=50)
-            save_base_to_file(base_now, 'data/base.txt')
+    # Pastikan cukup draw
+    if len(draws) < 51:
+        return "❌ Tak cukup draw (minima 51)."
 
-    return f"✔️ {len(added)} draw baru ditambah." if added else "✔️ Tiada draw baru."
+    # Tetapkan indeks
+    current_draw = draws[-1]
+    last_draw = draws[-2]
+
+    # Padam & jana semula semua fail base
+    base_dir = 'data'
+    os.makedirs(base_dir, exist_ok=True)
+
+    base_now = generate_base(draws, method='break', recent_n=50)
+    base_last = generate_base(draws[:-1], method='break', recent_n=51)
+    save_base_to_file(base_now, f"{base_dir}/base.txt")
+    save_base_to_file(base_last, f"{base_dir}/base_last.txt")
+
+    for method in strategies:
+        base_now = generate_base(draws, method=method, recent_n=50)
+        base_last = generate_base(draws[:-1], method=method, recent_n=51)
+        save_base_to_file(base_now, f"{base_dir}/base_{method}.txt")
+        save_base_to_file(base_last, f"{base_dir}/base_last_{method}.txt")
+
+    return f"✔️ Update selesai. {'+{} draw baru'.format(len(added)) if added else 'Tiada draw baru'}."

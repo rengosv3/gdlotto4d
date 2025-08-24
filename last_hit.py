@@ -7,7 +7,7 @@ def show_last_hit_tab(draws):
     st.header("📅 Last Hit Digit")
 
     # Slider jumlah draw
-    n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 60, step=5, key="lh_draws")
+    n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 120, step=5, key="lh_draws")
 
     # Pilihan posisi
     pos_check = {

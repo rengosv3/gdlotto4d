@@ -1,9 +1,10 @@
 import pandas as pd
 from strategies import generate_base
+
+strategies = ['frequency', 'polarity_shift', 'hybrid', 'break', 'smartpattern', 'hitfq']
+
 def match_insight(fp: str, base: list[list[str]], reverse: bool = False) -> list[str]:
-    digits = list(fp)
-    if reverse:
-        digits = digits[::-1]
+    digits = list(fp[::-1] if reverse else fp)
     return ["✅" if digits[i] in base[i] else "❌" for i in range(4)]
 
 def run_backtest(
@@ -14,23 +15,23 @@ def run_backtest(
     backtest_rounds: int = 10
 ) -> tuple[pd.DataFrame, int]:
     total = len(draws)
-    min_req = {'frequency':50, 'gap':120, 'hybrid':50, 'qaisara':60, 'smartpattern':60}
+    min_req = {'frequency':50, 'hybrid':50, 'smartpattern':60, 'break':50, 'hitfq':50, 'polarity_shift':50}
     req = min_req.get(strategy, 50)
-    if total < backtest_rounds + req:
-        raise ValueError(f"Not enough draws for backtest '{strategy}': "
-                         f"need {backtest_rounds+req}, have {total}")
 
-    reverse = True if arah == 'right' else False
+    if total < backtest_rounds + req:
+        raise ValueError(f"Not enough draws for backtest '{strategy}': need {backtest_rounds + req}, have {total}")
+
+    reverse = arah == 'right'
     records = []
 
     for i in range(backtest_rounds):
         test_draw = draws[-(i+1)]
         past_draws = draws[:-(i+1)]
 
-        if strategy == 'smartpattern':
-            base = generate_base(past_draws, method=strategy)
-        else:
+        try:
             base = generate_base(past_draws, method=strategy, recent_n=recent_n)
+        except:
+            continue
 
         insight = match_insight(test_draw['number'], base, reverse)
         records.append({
@@ -41,52 +42,37 @@ def run_backtest(
 
     df = pd.DataFrame(records[::-1])
 
-    # ✅ Betulkan: Kira draw yang full 4 ✅ sahaja
-    matched = sum(all(s.endswith("✅") for s in r['Insight'].split()) for r in records)
+    # ✅ Kira hanya yang full 4x "✅"
+    matched = sum(1 for r in records if all(s.endswith("✅") for s in r['Insight'].split()))
     return df, matched
 
-# ========================================================
-# FUNGSI TAMBAHAN: EVALUATE SEMUA STRATEGI
-# ========================================================
-
-strategies = ['frequency', 'polarity_shift', 'hybrid', 'break', 'smartpattern', 'hitfq']
-
-def evaluate_strategies(draws, test_n=20):
+def evaluate_strategies(draws: list[dict], test_n: int = 20) -> pd.DataFrame:
     results = []
 
     for method in strategies:
-        try:
-            correct_total = 0
-            tested = 0
+        full_hits = 0
+        tested = 0
 
-            for i in range(test_n):
-                subset = draws[:-(test_n - i)]
-                actual = draws[-(test_n - i)]['number']
+        for i in range(test_n):
+            subset = draws[:-(test_n - i)]
+            actual = draws[-(test_n - i)]['number']
 
-                try:
-                    base = generate_base(subset, method)
-                except Exception:
-                    continue
+            try:
+                base = generate_base(subset, method)
+            except:
+                continue
 
-                match = sum([actual[pos] in base[pos] for pos in range(4)])
-                correct_total += match
-                tested += 1
+            if all(actual[pos] in base[pos] for pos in range(4)):
+                full_hits += 1
 
-            avg_hit = correct_total / (tested * 4) if tested > 0 else 0
-            results.append({
-                'Strategy': method,
-                'Avg Hit Rate': round(avg_hit * 100, 2),
-                'Tested Draws': tested,
-                'Total Match': correct_total
-            })
+            tested += 1
 
-        except Exception as e:
-            results.append({
-                'Strategy': method,
-                'Avg Hit Rate': 0,
-                'Tested Draws': 0,
-                'Total Match': 0,
-                'Error': str(e)
-            })
+        hit_rate = (full_hits / tested * 100) if tested else 0
+        results.append({
+            'Strategy': method,
+            'Tested Draws': tested,
+            'Total Full Hits': full_hits,
+            'Hit Rate (%)': round(hit_rate, 2)
+        })
 
-    return pd.DataFrame(results).sort_values(by='Avg Hit Rate', ascending=False).reset_index(drop=True)
+    return pd.DataFrame(results).sort_values(by='Hit Rate (%)', ascending=False).reset_index(drop=True)

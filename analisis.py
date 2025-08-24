@@ -19,7 +19,7 @@ def show_analisis_tab(draws):
         st.warning("⚠️ Masukkan sekurang-kurangnya satu nombor 4D yang sah.")
         return
 
-    recent_n = st.slider("Jumlah draw terkini untuk analisis:", 10, len(draws), min(60, len(draws)), 5, key="anlz_recent")
+    recent_n = st.slider("Jumlah draw terkini untuk analisis:", 10, len(draws), min(50, len(draws)), 5, key="anlz_recent")
     recent_draws = draws[-recent_n:]
     freqs = _get_frequency(recent_draws)
     last_hits = _get_last_hit(recent_draws)

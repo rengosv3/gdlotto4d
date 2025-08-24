@@ -9,7 +9,7 @@ def show_hit_frequency_tab(draws):
     st.header("📊 Hit Frequency (HF)")
 
     # Pilihan konfigurasi
-    n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 30, step=5, key="hf_draws")
+    n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 50, step=5, key="hf_draws")
     positions = {
         "P1": st.checkbox("P1", value=True, key="hf_p1"),
         "P2": st.checkbox("P2", value=True, key="hf_p2"),

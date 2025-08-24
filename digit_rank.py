@@ -6,7 +6,7 @@ import os
 def show_digit_rank_tab(draws):
     st.header("📊 Digit Rank")
 
-    n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 60, step=5, key="dr_draws")
+    n_draws = st.slider("Jumlah draw terkini:", 10, min(120, len(draws)), 50, step=5, key="dr_draws")
 
     pos_check = {
         0: st.checkbox("P1", True, key="dr_p1"),
